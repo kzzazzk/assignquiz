@@ -54,42 +54,62 @@ function assignquiz_supports($feature) {
  * @param mod_aiquiz_mod_form $mform The form.
  * @return int The id of the newly inserted record.
  */
-function assignquiz_add_instance($fullform) {
-    error_log('FORM VALUE= '.print_r($fullform, true));
+function assignquiz_add_instance($moduleinstance ,$mform = null) {
+    error_log('FORM VALUE= '.print_r($moduleinstance, true));
     global $DB;
-    $fullform->requireallteammemberssubmit = 0;
-    $fullform->blindmarking  = 0;
-    $fullform->markingworkflow  = 0;
-    $assign_id = ai_assign_add_instance($fullform);
-    $cmid = $fullform->coursemodule;
 
+    $assign = new stdClass();
+
+    $assign->id = $moduleinstance->id;
+    $assign->course = $moduleinstance->course;
+    $assign->name = $moduleinstance->name;
+    $assign->intro = $moduleinstance->intro;
+    $assign->introformat = $moduleinstance->introformat;
+    $assign->submissiondrafts = $moduleinstance->submissiondrafts;
+    $assign->sendnotifications = $moduleinstance->sendnotifications;
+    $assign->sendlatenotifications = $moduleinstance->sendlatenotifications;
+    $assign->duedate = $moduleinstance->duedate;
+    $assign->allowsubmissionsfromdate = $moduleinstance->allowsubmissionsfromdate;
+    $assign->grade = $moduleinstance->grade;
+    $assign->requiresubmissionstatement = $moduleinstance->requiresubmissionstatement;
+    $assign->cutoffdate = $moduleinstance->cutoffdate;
+    $assign->gradingduedate = $moduleinstance->gradingduedate;
+    $assign->teamsubmission = $moduleinstance->teamsubmission;
+    $assign->attemptreopenmethod = $moduleinstance->attemptreopenmethod;
+    $assign->sendstudentnotifications = $moduleinstance->sendstudentnotifications;
+
+    $assign_id = $DB->insert_record('aiassign', $assign);
     // Process the options from the form.
-    $fullform->timecreated = time();
-    $result = quiz_process_options($fullform);
+    $moduleinstance->timecreated = time();
+    $result = quiz_process_options($moduleinstance);
     if ($result && is_string($result)) {
         return $result;
     }
     // Try to store it in the database.
-    $fullform->id = $DB->insert_record('aiquiz', $fullform);
+    $quiz_id = $DB->insert_record('aiquiz', $moduleinstance);
 
-    $DB->set_field('aiquiz','assignment_id', $assign_id ,['id' => $fullform->id]);
+    $DB->set_field('aiquiz','assignment_id', $assign_id ,['id' => $quiz_id]);
     // Create the first section for this quiz.
-    $DB->insert_record('aiquiz_sections', array('quizid' => $fullform->id,
+    $DB->insert_record('aiquiz_sections', array('quizid' => $quiz_id,
         'firstslot' => 1, 'heading' => '', 'shufflequestions' => 0));
 
     // Do the processing required after an add or an update.
-    //assignquiz_after_add_or_update($fullform);
+    //assignquiz_after_add_or_update($moduleinstance);
+    error_log('COURSE = '.print_r($moduleinstance->course, true));
+    $quiz = new stdClass();
+    $quiz->assignment_id = $assign_id;
+    $quiz->quiz_id = $quiz_id;
+    $quiz->course = 2;
+    $quiz->name = $moduleinstance->name;
+    $quiz->intro = $moduleinstance->intro;
+    $quiz->introformat = $moduleinstance->introformat;
+    $quiz->timecreated = $moduleinstance->timecreated;
+    $quiz->timemodified = $moduleinstance->timemodified;
+    $DB->insert_record('assignquiz', $quiz);
 
-    return $fullform->id;
+    return $moduleinstance->id;
 }
 
-function ai_assign_add_instance(stdClass $data, mod_assign_mod_form $form = null) {
-
-    global $CFG;
-    require($CFG->dirroot . '/mod/assignquiz/locallib.php');
-    $assignment = new assignquiz(context_module::instance($data->coursemodule), null, null);
-    return $assignment->add_instance($data, true);
-}
 function assignquiz_after_add_or_update($aiquiz) {
 
     global $DB;

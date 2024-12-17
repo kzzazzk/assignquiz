@@ -31,90 +31,90 @@ class assignquiz extends assign
 
         $adminconfig = $this->get_admin_config();
 
-        $this->name = $formdata->name;
-        $this->timemodified = time();
-        $this->timecreated = time();
-        $this->course = $formdata->course;
-
-        $this->intro = $formdata->intro;
-        $this->introformat = $formdata->introformat;
-        $this->alwaysshowdescription = !empty($formdata->alwaysshowdescription);
-        if (isset($formdata->activityeditor)) {
-            $this->activity = $this->save_editor_draft_files($formdata);
-            $this->activityformat = $formdata->activityeditor['format'];
-        }
-        if (isset($formdata->submissionattachments)) {
-            $this->submissionattachments = $formdata->submissionattachments;
-        }
-        $this->submissiondrafts = $formdata->submissiondrafts;
-        $this->requiresubmissionstatement = $formdata->requiresubmissionstatement;
-        $this->sendnotifications = $formdata->sendnotifications;
-        $this->sendlatenotifications = $formdata->sendlatenotifications;
-        $this->sendstudentnotifications = $adminconfig->sendstudentnotifications;
-        if (isset($formdata->sendstudentnotifications)) {
-            $this->sendstudentnotifications = $formdata->sendstudentnotifications;
-        }
-        $this->gradingduedate = $formdata->gradingduedate;
-        if (isset($formdata->timelimit)) {
-            $this->timelimit = $formdata->timelimit;
-        }
-        $this->allowsubmissionsfromdate = $formdata->allowsubmissionsfromdate;
-        $this->grade = $formdata->grade;
-        $this->completionsubmit = !empty($formdata->completionsubmit);
-        $this->teamsubmission = $formdata->teamsubmission;
-        $this->requireallteammemberssubmit = $formdata->requireallteammemberssubmit;
-        if (isset($formdata->teamsubmissiongroupingid)) {
-            $this->teamsubmissiongroupingid = $formdata->teamsubmissiongroupingid;
-        }
-        $this->blindmarking = $formdata->blindmarking;
-        if (isset($formdata->hidegrader)) {
-            $this->hidegrader = $formdata->hidegrader;
-        }
-        $this->attemptreopenmethod = ASSIGN_ATTEMPT_REOPEN_METHOD_NONE;
-        if (!empty($formdata->attemptreopenmethod)) {
-            $this->attemptreopenmethod = $formdata->attemptreopenmethod;
-        }
-        if (!empty($formdata->maxattempts)) {
-            $this->maxattempts = $formdata->maxattempts;
-        }
-        if (isset($formdata->preventsubmissionnotingroup)) {
-            $this->preventsubmissionnotingroup = $formdata->preventsubmissionnotingroup;
-        }
-        $this->markingworkflow = $formdata->markingworkflow;
-        $this->markingallocation = $formdata->markingallocation;
-        if (empty($this->markingworkflow)) { // If marking workflow is disabled, make sure allocation is disabled.
-            $this->markingallocation = 0;
-        }
+//        $this->name = $formdata->name;
+//        $this->timemodified = time();
+//        $this->timecreated = time();
+//        $this->course = $formdata->course;
+//
+//        $this->intro = $formdata->intro;
+//        $this->introformat = $formdata->introformat;
+//        $this->alwaysshowdescription = !empty($formdata->alwaysshowdescription);
+//        if (isset($formdata->activityeditor)) {
+//            $this->activity = $this->save_editor_draft_files($formdata);
+//            $this->activityformat = $formdata->activityeditor['format'];
+//        }
+//        if (isset($formdata->submissionattachments)) {
+//            $this->submissionattachments = $formdata->submissionattachments;
+//        }
+//        $this->submissiondrafts = $formdata->submissiondrafts;
+//        $this->requiresubmissionstatement = $formdata->requiresubmissionstatement;
+//        $this->sendnotifications = $formdata->sendnotifications;
+//        $this->sendlatenotifications = $formdata->sendlatenotifications;
+//        $this->sendstudentnotifications = $adminconfig->sendstudentnotifications;
+//        if (isset($formdata->sendstudentnotifications)) {
+//            $this->sendstudentnotifications = $formdata->sendstudentnotifications;
+//        }
+//        $this->gradingduedate = $formdata->gradingduedate;
+//        if (isset($formdata->timelimit)) {
+//            $this->timelimit = $formdata->timelimit;
+//        }
+//        $this->allowsubmissionsfromdate = $formdata->allowsubmissionsfromdate;
+//        $this->grade = $formdata->grade;
+//        $this->completionsubmit = !empty($formdata->completionsubmit);
+//        $this->teamsubmission = $formdata->teamsubmission;
+//        $this->requireallteammemberssubmit = $formdata->requireallteammemberssubmit;
+//        if (isset($formdata->teamsubmissiongroupingid)) {
+//            $this->teamsubmissiongroupingid = $formdata->teamsubmissiongroupingid;
+//        }
+//        $this->blindmarking = $formdata->blindmarking;
+//        if (isset($formdata->hidegrader)) {
+//            $this->hidegrader = $formdata->hidegrader;
+//        }
+//        $this->attemptreopenmethod = ASSIGN_ATTEMPT_REOPEN_METHOD_NONE;
+//        if (!empty($formdata->attemptreopenmethod)) {
+//            $this->attemptreopenmethod = $formdata->attemptreopenmethod;
+//        }
+//        if (!empty($formdata->maxattempts)) {
+//            $this->maxattempts = $formdata->maxattempts;
+//        }
+//        if (isset($formdata->preventsubmissionnotingroup)) {
+//            $this->preventsubmissionnotingroup = $formdata->preventsubmissionnotingroup;
+//        }
+//        $this->markingworkflow = $formdata->markingworkflow;
+//        $this->markingallocation = $formdata->markingallocation;
+//        if (empty($this->markingworkflow)) { // If marking workflow is disabled, make sure allocation is disabled.
+//            $this->markingallocation = 0;
+//        }
         $returnid = $DB->insert_record('aiassign', $this);
         $this->instance = $DB->get_record('aiassign', array('id' => $returnid), '*', MUST_EXIST);
         $this->assign_instance = $DB->get_record('aiassign', array('id' => $returnid), '*', MUST_EXIST);
 
         $this->save_intro_draft_files($formdata);
         $this->save_editor_draft_files($formdata);
-
-        if ($callplugins) {
-            // Call save_settings hook for submission plugins.
-            foreach ($this->submissionplugins as $plugin) {
-                if (!$this->update_plugin_instance($plugin, $formdata)) {
-                    throw new \moodle_exception($plugin->get_error());
-                    return false;
-                }
-            }
-            foreach ($this->feedbackplugins as $plugin) {
-                if (!$this->update_plugin_instance($plugin, $formdata)) {
-                    throw new \moodle_exception($plugin->get_error());
-                    return false;
-                }
-            }
-
-            // In the case of upgrades the coursemodule has not been set,
-            // so we need to wait before calling these two.
-            // $this->update_calendar($formdata->coursemodule);
-            if (!empty($formdata->completionexpected)) {
-                \core_completion\api::update_completion_date_event($formdata->coursemodule, 'aiassign', $this->instance,
-                    $formdata->completionexpected);
-            }
-        }
+//
+//        if ($callplugins) {
+//            // Call save_settings hook for submission plugins.
+//            foreach ($this->submissionplugins as $plugin) {
+//                if (!$this->update_plugin_instance($plugin, $formdata)) {
+//                    throw new \moodle_exception($plugin->get_error());
+//                    return false;
+//                }
+//            }
+//            foreach ($this->feedbackplugins as $plugin) {
+//                if (!$this->update_plugin_instance($plugin, $formdata)) {
+//                    throw new \moodle_exception($plugin->get_error());
+//                    return false;
+//                }
+//            }
+//
+//            // In the case of upgrades the coursemodule has not been set,
+//            // so we need to wait before calling these two.
+//            // $this->update_calendar($formdata->coursemodule);
+//            if (!empty($formdata->completionexpected)) {
+//                \core_completion\api::update_completion_date_event($formdata->coursemodule, 'aiassign', $this->instance,
+//                    $formdata->completionexpected);
+//            }
+//        }
         /*
             $update = new stdClass();
             $update->id = $this->get_instance()->id;
