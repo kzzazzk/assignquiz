@@ -58,7 +58,7 @@ function assignquiz_add_instance($moduleinstance ,$mform = null) {
     error_log('FORM VALUE= '.print_r($moduleinstance, true));
     global $DB;
 
-    $moduleinstance->intro = format_text($moduleinstance->intro, FORMAT_HTML);
+    $moduleinstance->intro = $moduleinstance->intro;
 
     $assign_id = $DB->insert_record('aiassign', $moduleinstance);
     $moduleinstance->assignment_id = $assign_id;
@@ -123,10 +123,9 @@ function assignquiz_update_instance($moduleinstance, $mform = null) {
 
     $moduleinstance->timemodified = time();
     $moduleinstance->id = $moduleinstance->instance;
-    $DB->update_record('aiassign', $moduleinstance);
-    $DB->update_record('aiquiz', $moduleinstance);
-
-
+    error_log('FORM VALUE= '.print_r($moduleinstance->id, true));
+//    $DB->update_record('aiassign', $moduleinstance);
+//    $DB->update_record('aiquiz', $moduleinstance);
     return $DB->update_record('assignquiz', $moduleinstance);
 }
 
@@ -139,12 +138,20 @@ function assignquiz_update_instance($moduleinstance, $mform = null) {
 function assignquiz_delete_instance($id) {
     global $DB;
 
-    $exists = $DB->get_record('aiquiz', array('id' => $id));
-    if (!$exists) {
+    $quiz_id = $DB->get_field('assignquiz','quiz_id', array('id' => $id));
+    $assign_id = $DB->get_field('assignquiz','assignment_id', array('id' => $id));
+
+    $exists_quiz = $DB->get_record('aiquiz', array('id' => $quiz_id));
+    $exists_assign = $DB->get_record('aiassign', array('id' => $assign_id));
+    $exists_assignquiz = $DB->get_record('assignquiz', array('id' => $id));
+
+    if (!$exists_quiz || !$exists_assign || !$exists_assignquiz ) {
         return false;
     }
 
-    $DB->delete_records('aiquiz', array('id' => $id));
+    $DB->delete_records('aiquiz', array('id' => $quiz_id));
+    $DB->delete_records('aiassign', array('id' => $assign_id));
+    $DB->delete_records('assignquiz', array('id' => $id));
 
     return true;
 }

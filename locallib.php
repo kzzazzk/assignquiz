@@ -22,7 +22,7 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 require_once($CFG->dirroot.'/mod/assign/locallib.php');
-class assignquiz extends assign
+class aiassign extends assign
 {
     private $assign_instance;
     public function add_instance(stdClass $formdata, $callplugins)

@@ -22,37 +22,23 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace mod_assignquiz\event;
+namespace mod_assignquiz\form;
 defined('MOODLE_INTERNAL') || die();
-
+global $CFG;
+require_once($CFG->libdir . '/formslib.php');
 
 /**
- * The mod_quiz course module viewed event class.
- *
- * @package    mod_quiz
- * @since      Moodle 2.7
- * @copyright  2014 Mark Nelson <markn@moodle.com>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * Class definition
  */
-class assignquiz_course_module_viewed extends \core\event\course_module_viewed {
-
+class assignquiz_context_form extends \moodleform {
     /**
-     * Init method.
-     *
-     * @return void
+     * Define the form.
      */
-    protected function init() {
-        $this->data['crud'] = 'r';
-        $this->data['edulevel'] = self::LEVEL_PARTICIPATING;
-        $this->data['objecttable'] = 'aiquiz';
-    }
-
-    /**
-     * get object id mapping.
-     *
-     * @return string[]
-     */
-    public static function get_objectid_mapping() {
-        return ['db' => 'aiquiz', 'restore' => 'aiquiz'];
+    protected function definition() {
+        $mform = $this->_form;
+        $mform->addElement('textarea', 'description', get_string('yourmessage', 'local_greetings'));
+        $mform->setType('description', PARAM_TEXT);
+        $submitlabel = get_string('submit');
+        $mform->addElement('submit', 'submitmessage', $submitlabel);
     }
 }
