@@ -18,13 +18,16 @@
  * Prints an instance of mod_aiquiz.
  *
  * @package     mod_aiquiz
- * @copyright   2024 Zakaria Lasry Sahraou zsahraoui20@gmail.com
+ * @copyright   2024 Zakaria Lasry z.lsahraoui@alumnos.upm.es
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 require(__DIR__.'/../../config.php');
 require_once(__DIR__.'/lib.php');
-require_once(__DIR__.'/locallib.php');
+require_once(__DIR__.'/classes/event/course_module_viewed.php');
+require_once(__DIR__.'/classes/form/context_form.php');
+
+use mod_aiquiz\form\context_form;
 
 // Course module id.
 $id = optional_param('id', 0, PARAM_INT);
@@ -32,51 +35,57 @@ $id = optional_param('id', 0, PARAM_INT);
 // Activity instance id.
 $a = optional_param('a', 0, PARAM_INT);
 
+
 if ($id) {
-    $cm = get_coursemodule_from_id('aiquiz', $id, 0, false, MUST_EXIST);
-    $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
-    $moduleinstance = $DB->get_record('aiquiz', array('id' => $cm->instance), '*', MUST_EXIST);
+    $cm = get_coursemodule_from_id('assignquiz', $id, 0, false, MUST_EXIST);
+    $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
+    $moduleinstance = $DB->get_record('assignquiz', ['id' => $cm->instance], '*', MUST_EXIST);
 } else {
-    $moduleinstance = $DB->get_record('aiquiz', array('id' => $a), '*', MUST_EXIST);
-    $course = $DB->get_record('course', array('id' => $moduleinstance->course), '*', MUST_EXIST);
-    $cm = get_coursemodule_from_instance('aiquiz', $moduleinstance->id, $course->id, false, MUST_EXIST);
+    $moduleinstance = $DB->get_record('assignquiz', ['id' => $a], '*', MUST_EXIST);
+    $course = $DB->get_record('course', ['id' => $moduleinstance->course], '*', MUST_EXIST);
+    $cm = get_coursemodule_from_instance('assignquiz', $moduleinstance->id, $course->id, false, MUST_EXIST);
 }
 
+// Check login and get context.
 require_login($course, true, $cm);
-
 $context = context_module::instance($cm->id);
+require_capability('mod/aiquiz:view', $context);
 
-$event = \mod_aiquiz\event\course_module_viewed::create(array(
+// Cache some other capabilities we use several times.
+$canattempt = has_capability('mod/aiquiz:attempt', $context);
+$canreviewmine = has_capability('mod/aiquiz:reviewmyattempts', $context);
+$canpreview = has_capability('mod/aiquiz:preview', $context);
+
+$event = \mod_assignquiz\event\assignquiz_course_module_viewed::create([
     'objectid' => $moduleinstance->id,
-    'context' => $context
-));
+    'context' => $context,
+]);
 $event->add_record_snapshot('course', $course);
+$event->add_record_snapshot('assignquiz', $moduleinstance);
 $event->add_record_snapshot('aiquiz', $moduleinstance);
+$event->add_record_snapshot('aiassign', $moduleinstance);
 $event->trigger();
 
-list ($course, $cm) = get_course_and_cm_from_cmid($id, 'aiquiz');
-
-
-$aiassign = new aiassign($context, $cm, $course);
-$urlparams = array('id' => $id,
-    'action' => optional_param('action', '', PARAM_ALPHA),
-    'rownum' => optional_param('rownum', 0, PARAM_INT),
-    'useridlistid' => optional_param('useridlistid', $aiassign->get_useridlist_key_id(), PARAM_ALPHANUM));
-
-
-
-$aiassign->set_module_viewed();
-
-// Apply overrides.
-$aiassign->update_effective_access($USER->id);
-
-// Get the assign class to
-// render the page.
-echo $aiassign->view(optional_param('action', '', PARAM_ALPHA));
-
+$PAGE->set_url('/mod/assignquiz/view.php', ['id' => $cm->id, 'sesskey' => sesskey()]);
 $PAGE->set_title(format_string($moduleinstance->name));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
+
+// 1 Add the db part if needed$DB->insert_record('local_greetings_messages', $record);
+// 2 require_capability('local/greetings:postmessages', $context);
+
+$contextform = new \mod_assignquiz\form\assignquiz_context_form();
+if ($data = $contextform->get_data()) {
+    $description = required_param('description', PARAM_TEXT  );
+
+    if (!empty($description)) {
+        $record = new stdClass;
+        $record->message = $description;
+        $record->timecreated = time();
+        $record->userid = $USER->id;
+    }
+}
+
 echo $OUTPUT->header();
 
 echo $OUTPUT->footer();

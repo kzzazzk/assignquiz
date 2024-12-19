@@ -370,7 +370,7 @@
         <KEY NAME="grade" TYPE="foreign" FIELDS="grade" REFTABLE="assign_grades" REFFIELDS="id" COMMENT="The grade instance this feedback relates to."/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="assignquiz" COMMENT="Linking table for assignments and quizzes">
+    <TABLE NAME="assignquiz" COMMENT="Stores the aiquiz activity module instances.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="assignment_id" TYPE="int" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="Id for the assignment for this assignquiz instance"/>
@@ -384,10 +384,10 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="fk_course" TYPE="foreign" FIELDS="course" REFTABLE="course" REFFIELDS="id"/>
         <KEY NAME="quiz_id" TYPE="foreign" FIELDS="quiz_id" REFTABLE="aiquiz" REFFIELDS="id"/>
         <KEY NAME="assignment_id" TYPE="foreign" FIELDS="assignment_id" REFTABLE="aiassign" REFFIELDS="id"/>
       </KEYS>
     </TABLE>
-
   </TABLES>
 </XMLDB>
