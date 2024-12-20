@@ -57,16 +57,17 @@ function assignquiz_supports($feature) {
 function assignquiz_add_instance($moduleinstance ,$mform = null) {
     error_log('FORM VALUE= '.print_r($moduleinstance, true));
     global $DB;
-
-    $moduleinstance->intro = $moduleinstance->intro;
+    $assignquizid = $DB->insert_record('assignquiz', $moduleinstance);
 
     $assign_id = $DB->insert_record('aiassign', $moduleinstance);
     $moduleinstance->assignment_id = $assign_id;
+    $DB->set_field('aiassign', 'assignquizid', $assignquizid, array('id' => $assign_id));
 
     $quiz_id = $DB->insert_record('aiquiz', $moduleinstance);
     $moduleinstance->quiz_id = $quiz_id;
+    $DB->set_field('aiquiz', 'assignquizid', $assignquizid, array('id' => $quiz_id));
 
-    return $DB->insert_record('assignquiz', $moduleinstance);
+    return $assignquizid;
 }
 
 function assignquiz_after_add_or_update($aiquiz) {
@@ -120,12 +121,12 @@ function assignquiz_after_add_or_update($aiquiz) {
  */
 function assignquiz_update_instance($moduleinstance, $mform = null) {
     global $DB;
-
     $moduleinstance->timemodified = time();
+    $moduleinstance->id = $DB->get_field('assignquiz','id', array('id' => $moduleinstance->instance));
+    $DB->update_record('aiquiz', $moduleinstance);
+    $moduleinstance->id = $DB->get_field('assignquiz','id', array('id' => $moduleinstance->instance));
+    $DB->update_record('aiassign', $moduleinstance);
     $moduleinstance->id = $moduleinstance->instance;
-    error_log('FORM VALUE= '.print_r($moduleinstance->id, true));
-//    $DB->update_record('aiassign', $moduleinstance);
-//    $DB->update_record('aiquiz', $moduleinstance);
     return $DB->update_record('assignquiz', $moduleinstance);
 }
 
