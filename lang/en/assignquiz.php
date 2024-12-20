@@ -50,7 +50,10 @@ $string['activityname'] = 'Activity name';
 $string['quiztiming'] = 'Quiz Timing';
 $string['activitydescription'] = 'Required knowledge';
 $string['requiredknowledge_help'] = 'Describe in detail what knowledge is required for the users to properly meet with the standards of grading.';
-$string['aiquiz:view'] = 'Ability to see that the AssignQuiz exists, and the basic information 
+$string['aiassignconfigtitle'] = 'Assignment Configuration';
+$string['aiquizconfigtitle'] = 'AI Quiz Configuration';
+$string['coursemoduleconfigtitle'] = 'Other course module settings';
+$string['aiquiz:view'] = 'Ability to see that the AssignQuiz exists, and the basic information
 about it, for example the start date and time limit.';
 $string['aiquiz:addinstance'] = 'Ability to add a new AssignQuiz to the course.';
 $string['aiquiz:attempt'] = 'Ability to do the AssignQuiz as a student.';

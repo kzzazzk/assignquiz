@@ -37,15 +37,22 @@ require_once($CFG->dirroot.'/mod/assign/locallib.php');
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mod_assignquiz_mod_form extends moodleform_mod {
-
+    protected static $reviewfields = array(); // Initialised in the constructor.
     protected $quiz_form;
     /**
      * Defines forms elements
      */
     public function definition() {
-        global $DB;
+        self::$reviewfields = array(
+            'attempt'          => array('theattempt', 'quiz'),
+            'correctness'      => array('whethercorrect', 'question'),
+            'marks'            => array('marks', 'quiz'),
+            'specificfeedback' => array('specificfeedback', 'question'),
+            'generalfeedback'  => array('generalfeedback', 'question'),
+            'rightanswer'      => array('rightanswer', 'question'),
+            'overallfeedback'  => array('reviewoverallfeedback', 'quiz'),
+        );
         $mform = $this->_form;
-        $quiz_form = new mod_quiz_mod_form($this->get_current(),$this->_customdata['current'],null , $this->get_course());
         $this->general_header_definition($mform);
         $this->assignment_form($mform);
         $this->quiz_form($mform);
@@ -53,7 +60,6 @@ class mod_assignquiz_mod_form extends moodleform_mod {
     }
     public function general_header_definition($mform)
     {
-        // -------------------------------------------------------------------------------
         global $COURSE;
         $mform->addElement('header', 'general', get_string('general', 'form'));
 
@@ -104,10 +110,16 @@ class mod_assignquiz_mod_form extends moodleform_mod {
     }
     public function quiz_form($mform){
         global $COURSE, $CFG, $DB, $PAGE;
+        //$quiz_form = new mod_quiz_mod_form($this->get_current(),$this->_customdata['current'],null , $this->get_course());
+
         $quizconfig = get_config('quiz');
+        $mform->addElement('header', 'title', get_string('aiquizconfigtitle', 'assignquiz'));
 
         // -------------------------------------------------------------------------------
         $mform->addElement('header', 'quiztiming', get_string('quiztiming', 'assignquiz'));
+        $mform->setExpanded('quiztiming', true);
+
+        $mform->addRule('name', null, 'required', null, 'client');
 
         // Open and close dates.
         $mform->addElement('date_time_selector', 'timeopen', get_string('quizopen', 'quiz'),
@@ -120,6 +132,7 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         // Time limit.
         $mform->addElement('duration', 'timelimit', get_string('timelimit', 'quiz'),
             array('optional' => true));
+        $mform->setDefault('timeopen', time());
         $mform->addHelpButton('timelimit', 'timelimit', 'quiz');
 
         // What to do with overdue attempts.
@@ -127,8 +140,8 @@ class mod_assignquiz_mod_form extends moodleform_mod {
             quiz_get_overdue_handling_options());
         $mform->addHelpButton('overduehandling', 'overduehandling', 'quiz');
         // TODO Formslib does OR logic on disableif, and we need AND logic here.
-        // $mform->disabledIf('overduehandling', 'timelimit', 'eq', 0);
-        // $mform->disabledIf('overduehandling', 'timeclose', 'eq', 0);
+         $mform->disabledIf('overduehandling', 'timelimit', 'eq', 0);
+         $mform->disabledIf('overduehandling', 'timeclose', 'eq', 0);
 
         // Grace period time.
         $mform->addElement('duration', 'graceperiod', get_string('graceperiod', 'quiz'),
@@ -230,14 +243,14 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $mform->addHelpButton('reviewoptionshdr', 'reviewoptionsheading', 'quiz');
 
         // Review options.
-//        $this->add_review_options_group($mform, $quizconfig, 'during',
-//            mod_quiz_display_options::DURING, true);
-//        $this->add_review_options_group($mform, $quizconfig, 'immediately',
-//            mod_quiz_display_options::IMMEDIATELY_AFTER);
-//        $this->add_review_options_group($mform, $quizconfig, 'open',
-//            mod_quiz_display_options::LATER_WHILE_OPEN);
-//        $this->add_review_options_group($mform, $quizconfig, 'closed',
-//            mod_quiz_display_options::AFTER_CLOSE);
+        $this->add_review_options_group($mform, $quizconfig, 'during',
+            mod_quiz_display_options::DURING, true);
+        $this->add_review_options_group($mform, $quizconfig, 'immediately',
+            mod_quiz_display_options::IMMEDIATELY_AFTER);
+        $this->add_review_options_group($mform, $quizconfig, 'open',
+            mod_quiz_display_options::LATER_WHILE_OPEN);
+        $this->add_review_options_group($mform, $quizconfig, 'closed',
+            mod_quiz_display_options::AFTER_CLOSE);
 
         foreach ($behaviours as $behaviour => $notused) {
             $unusedoptions = question_engine::get_behaviour_unused_display_options($behaviour);
@@ -250,9 +263,10 @@ class mod_assignquiz_mod_form extends moodleform_mod {
             'neq', 'wontmatch');
         $mform->disabledIf('overallfeedbackduring', 'preferredbehaviour',
             'neq', 'wontmatch');
-//        foreach (mod_quiz_mod_form::$reviewfields as $field => $notused) {
-//            $mform->disabledIf($field . 'closed', 'timeclose[enabled]');
-//        }
+
+        foreach (self::$reviewfields as $field => $notused) {
+            $mform->disabledIf($field . 'closed', 'timeclose[enabled]');
+        }
 
         // -------------------------------------------------------------------------------
         $mform->addElement('header', 'display', get_string('appearance'));
@@ -379,11 +393,9 @@ class mod_assignquiz_mod_form extends moodleform_mod {
             $mform->disabledIf('feedbacktext[' . ($i + 1) . ']', 'grade', 'eq', 0);
         }
 
-
-
+        $mform->addElement('header', 'coursemoduleelements', get_string('coursemoduleconfigtitle', 'assignquiz'));
         // -------------------------------------------------------------------------------
         $this->standard_coursemodule_elements();
-
         // Check and act on whether setting outcomes is considered an advanced setting.
         $mform->setAdvanced('modoutcomes', !empty($quizconfig->outcomes_adv));
 
@@ -400,16 +412,19 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 
     private function assignment_form($mform){
         global $COURSE, $CFG, $DB, $PAGE;
-
+        $mform->addElement('header', 'assignformtitle', get_string('aiassignconfigtitle', 'assignquiz'));
         $mform->addElement('header', 'availability', get_string('assignmenttiming', 'assignquiz'));
+        $mform->setExpanded('availability', true);
 
         $name = get_string('allowsubmissionsfromdate', 'assign');
         $options = array('optional'=>true);
         $mform->addElement('date_time_selector', 'allowsubmissionsfromdate', $name, $options);
+        $mform->setDefault('allowsubmissionsfromdate', time());
         $mform->addHelpButton('allowsubmissionsfromdate', 'allowsubmissionsfromdate', 'assign');
 
         $name = get_string('duedate', 'assign');
         $mform->addElement('date_time_selector', 'duedate', $name, array('optional'=>true));
+        $mform->setDefault('duedate', time());
         $mform->addHelpButton('duedate', 'duedate', 'assign');
 
         $name = get_string('cutoffdate', 'assign');
@@ -418,6 +433,7 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 
         $name = get_string('gradingduedate', 'assign');
         $mform->addElement('date_time_selector', 'gradingduedate', $name, array('optional' => true));
+        $mform->setDefault('gradingduedate', time());
         $mform->addHelpButton('gradingduedate', 'gradingduedate', 'assign');
 
         $timelimitenabled = get_config('assign', 'enabletimelimit');
@@ -433,6 +449,23 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $mform->addHelpButton('alwaysshowdescription', 'alwaysshowdescription', 'assign');
         $mform->disabledIf('alwaysshowdescription', 'allowsubmissionsfromdate[enabled]', 'notchecked');
 
+        $mform->addElement('header', 'submissiontypes', get_string('submissiontypes', 'assign'));
+
+        $submissionpluginsenabled = array();
+        $group = $mform->addGroup(array(), 'submissionplugins', get_string('submissiontypes', 'assign'), array(' '), false);
+        foreach ($this->submissionplugins as $plugin) {
+            $this->add_plugin_settings($plugin, $mform, $submissionpluginsenabled);
+        }
+        $group->setElements($submissionpluginsenabled);
+
+        $mform->addElement('header', 'feedbacktypes', get_string('feedbacktypes', 'assign'));
+        $feedbackpluginsenabled = array();
+        $group = $mform->addGroup(array(), 'feedbackplugins', get_string('feedbacktypes', 'assign'), array(' '), false);
+        foreach ($this->feedbackplugins as $plugin) {
+            $this->add_plugin_settings($plugin, $mform, $feedbackpluginsenabled);
+        }
+        $group->setElements($feedbackpluginsenabled);
+        $mform->setExpanded('submissiontypes');
 
         $mform->addElement('header', 'submissionsettings', get_string('submissionsettings', 'assign'));
 
@@ -518,6 +551,69 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $mform->addElement('selectyesno', 'sendstudentnotifications', $name);
         $mform->addHelpButton('sendstudentnotifications', 'sendstudentnotificationsdefault');
     }
+
+
+    protected function add_review_options_group($mform, $quizconfig, $whenname,
+                                                $when, $withhelp = false) {
+        global $OUTPUT;
+
+        $group = array();
+        foreach (self::$reviewfields as $field => $string) {
+            list($identifier, $component) = $string;
+
+            $label = get_string($identifier, $component);
+            $group[] = $mform->createElement('html', html_writer::start_div('review_option_item'));
+            $el = $mform->createElement('checkbox', $field . $whenname, '', $label);
+            if ($withhelp) {
+                $el->_helpbutton = $OUTPUT->render(new help_icon($identifier, $component));
+            }
+            $group[] = $el;
+            $group[] = $mform->createElement('html', html_writer::end_div());
+        }
+        $mform->addGroup($group, $whenname . 'optionsgrp',
+            get_string('review' . $whenname, 'quiz'), null, false);
+
+        foreach (self::$reviewfields as $field => $notused) {
+            $cfgfield = 'review' . $field;
+            if ($quizconfig->$cfgfield & $when) {
+                $mform->setDefault($field . $whenname, 1);
+            } else {
+                $mform->setDefault($field . $whenname, 0);
+            }
+        }
+
+        if ($whenname != 'during') {
+            $mform->disabledIf('correctness' . $whenname, 'attempt' . $whenname);
+            $mform->disabledIf('specificfeedback' . $whenname, 'attempt' . $whenname);
+            $mform->disabledIf('generalfeedback' . $whenname, 'attempt' . $whenname);
+            $mform->disabledIf('rightanswer' . $whenname, 'attempt' . $whenname);
+        }
+    }
+
+    protected function add_plugin_settings(assign_plugin $plugin, MoodleQuickForm $mform, & $pluginsenabled) {
+        global $CFG;
+        if ($plugin->is_visible() && !$plugin->is_configurable() && $plugin->is_enabled()) {
+            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
+            $pluginsenabled[] = $mform->createElement('hidden', $name, 1);
+            $mform->setType($name, PARAM_BOOL);
+            $plugin->get_settings($mform);
+        } else if ($plugin->is_visible() && $plugin->is_configurable()) {
+            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
+            $label = $plugin->get_name();
+            $pluginsenabled[] = $mform->createElement('checkbox', $name, '', $label);
+            $helpicon = $this->get_renderer()->help_icon('enabled', $plugin->get_subtype() . '_' . $plugin->get_type());
+            $pluginsenabled[] = $mform->createElement('static', '', '', $helpicon);
+
+            $default = get_config($plugin->get_subtype() . '_' . $plugin->get_type(), 'default');
+            if ($plugin->get_config('enabled') !== false) {
+                $default = $plugin->is_enabled();
+            }
+            $mform->setDefault($plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled', $default);
+
+            $plugin->get_settings($mform);
+
+        }
+    }
     /**
      * Defines form behaviour after being defined
      */
@@ -525,7 +621,7 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         parent::definition_after_data();
 
         $mform = $this->_form;
-        $this->assignment_availability_modif($mform);
+        //$this->assignment_availability_modif($mform);
 //        $this->submission_settings_modif($mform);
 //        $this->group_submissions_modif($mform);
 //        $this->notifications_modif($mform);
@@ -547,12 +643,11 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $mform->removeElement('gradingduedate');
         $mform->removeElement('alwaysshowdescription');
 
-        $mform->insertElementBefore($availability, 'quiztiming');
-        $mform->insertElementBefore($allowsubmissionsfromdate, 'quiztiming');
-        $mform->insertElementBefore($duedate, 'quiztiming');
-        $mform->insertElementBefore($cutoffdate, 'quiztiming');
-        $mform->insertElementBefore($gradingduedate, 'quiztiming');
-        $mform->insertElementBefore($alwaysshowdescription, 'quiztiming');
+        $mform->insertElementBefore($allowsubmissionsfromdate, 'assignformtitle');
+        $mform->insertElementBefore($duedate, 'assignformtitle');
+        $mform->insertElementBefore($cutoffdate, 'assignformtitle');
+        $mform->insertElementBefore($gradingduedate, 'assignformtitle');
+        $mform->insertElementBefore($alwaysshowdescription, 'assignformtitle');
     }
 
 }
