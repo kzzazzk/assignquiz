@@ -36,9 +36,11 @@ require_once($CFG->dirroot.'/mod/assign/locallib.php');
  * @copyright   2024 Zakaria Lasry Sahraou zsahraoui20@gmail.com
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+define("weekdelay",  604800   );
+
 class mod_assignquiz_mod_form extends moodleform_mod {
     protected static $reviewfields = array(); // Initialised in the constructor.
-    protected $quiz_form;
     /**
      * Defines forms elements
      */
@@ -58,9 +60,31 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $this->quiz_form($mform);
 
     }
+
+    protected function standard_intro_elements($customlabel=null,$elementname=null,$displaydescriptionoption=false) {
+        global $CFG;
+
+        $required = $CFG->requiremodintro;
+
+        $mform = $this->_form;
+
+        $mform->addElement('editor', $elementname, $customlabel, array('rows' => 10), array('maxfiles' => EDITOR_UNLIMITED_FILES,
+            'noclean' => true, 'context' => $this->context, 'subdirs' => true));
+        $mform->setType($elementname, PARAM_RAW); // no XSS prevention here, users must be trusted
+        if ($required) {
+            $mform->addRule($elementname, get_string('required'), 'required', null, 'client');
+        }
+
+        // If the 'show description' feature is enabled, this checkbox appears below the intro.
+        // We want to hide that when using the singleactivity course format because it is confusing.
+        if($displaydescriptionoption) {
+            $mform->addElement('advcheckbox', 'showdescription', get_string('showdescription'));
+            $mform->addHelpButton('showdescription', 'showdescription');
+        }
+    }
     public function general_header_definition($mform)
     {
-        global $COURSE;
+        global $COURSE, $PAGE;
         $mform->addElement('header', 'general', get_string('general', 'form'));
 
         // Name.
@@ -72,31 +96,70 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         }
         $mform->addRule('name', null, 'required', null, 'client');
         $mform->addRule('name', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
-
-        // Introduction.
-        $mform->addElement('editor', 'introeditor', get_string('activitydescription','assignquiz'), array('rows' => 10), array('maxfiles' => EDITOR_UNLIMITED_FILES,
-            'noclean' => true, 'context' => $this->context, 'subdirs' => true));
-        $mform->setType('introeditor', PARAM_RAW); // no XSS prevention here, users must be trusted
+        $mform->addElement('textarea', 'requiredknowledge', get_string('activitydescription','assignquiz'), 'wrap="virtual" rows="3" cols="50"');
+        $mform->setType('requiredknowledge', PARAM_RAW); // no XSS prevention here, users must be trusted
 
         /*
         if ($required) {
             $mform->addRule('introeditor', get_string('required'), 'required', null, 'client');
         }
         */
-        $mform->addHelpButton('introeditor', 'requiredknowledge', 'assignquiz');
+        // Add the select dropdown for description type
+        $DESCRIPTION_TYPE = [
+            'Static' => get_string('static', 'assignquiz'),
+            'Dynamic' => get_string('dynamic', 'assignquiz')
+        ];
+        $mform->addElement('select', 'descriptiontype', get_string('descriptiontype', 'assignquiz'), $DESCRIPTION_TYPE);
+        $mform->addHelpButton('descriptiontype', 'descriptiontype', 'assignquiz');
+        $this->standard_intro_elements(get_string('submissionphasedescription', 'assignquiz'), 'assignintro');
+        $this->standard_intro_elements(get_string('quizphasedescription', 'assignquiz'), 'quizintro');
+        $this->standard_intro_elements(get_string('description', 'assignquiz'), 'intro', true);
 
+        $PAGE->requires->js_init_code(
+        "require(['jquery'], function($) {
+                    function updateEditorVisibility() {
+                        var selectedValue = $('#id_descriptiontype').val();
+            
+                        if (selectedValue === 'Static') {
+                            // Hide 'assignintro' and 'quizintro' editors
+                            $('#id_assignintro').closest('.fitem').hide();
+                            $('#id_quizintro').closest('.fitem').hide();
+            
+                            // Show 'activityeditor'
+                            $('#id_intro').closest('.fitem').show();
+                        } else {
+                            // Show both 'assignintro' and 'quizintro' for 'Dynamic' selection
+                            $('#id_assignintro').closest('.fitem').show();
+                            $('#id_quizintro').closest('.fitem').show();
+            
+                            // Hide 'activityeditor'
+                            $('#id_intro').closest('.fitem').hide();
+                        }
+                    }
+            
+                    // Run on load to initialize visibility
+                    updateEditorVisibility();
+            
+                    // Update visibility when the dropdown value changes
+                    $('#id_descriptiontype').change(function() {
+                        updateEditorVisibility();
+                    });
+            });"
+        );
 
-        // If the 'show description' feature is enabled, this checkbox appears below the intro.
-        // We want to hide that when using the singleactivity course format because it is confusing.
-        if ($this->_features->showdescription  && $this->courseformat->has_view_page()) {
-            $mform->addElement('advcheckbox', 'showdescription', get_string('showdescription'));
-            $mform->addHelpButton('showdescription', 'showdescription');
-        }
+    }
+    private function assignment_form($mform){
+        global $COURSE, $CFG, $DB, $PAGE;
+        $mform->addElement('header', 'aiassignconfigtitle', get_string('aiassignconfigtitle', 'assignquiz'));
+        $mform->addElement('header', 'basicsettings', get_string('basicsettings', 'assignquiz'));
+        $mform->setExpanded('basicsettings', true);
+
+        error_log('FORM = '.print_r($mform, true));
         // Activity.
         $mform->addElement('editor', 'activityeditor',
-            get_string('activityeditor', 'assignquiz'), array('rows' => 10), array('maxfiles' => EDITOR_UNLIMITED_FILES,
+            get_string('assigninstructions', 'assignquiz'), array('rows' => 10), array('maxfiles' => EDITOR_UNLIMITED_FILES,
                 'noclean' => true, 'context' => $this->context, 'subdirs' => true));
-        $mform->addHelpButton('activityeditor', 'activityeditor', 'assign');
+        $mform->addHelpButton('activityeditor', 'activityeditor');
         $mform->setType('activityeditor', PARAM_RAW);
 
         $mform->addElement('filemanager', 'introattachments',
@@ -107,7 +170,174 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $mform->addElement('advcheckbox', 'submissionattachments', get_string('submissionattachments', 'assign'));
         $mform->addHelpButton('submissionattachments', 'submissionattachments', 'assign');
         // --------------------------------------------------------------------------------------
+        $mform->addElement('header', 'availability', get_string('assignmenttiming', 'assignquiz'));
+        $mform->setExpanded('availability', true);
+
+        $name = get_string('allowsubmissionsfromdate', 'assign');
+        $options = array('optional'=>true);
+        $mform->addElement('date_time_selector', 'allowsubmissionsfromdate', $name, $options);
+        $mform->setDefault('allowsubmissionsfromdate', time());
+        $mform->addHelpButton('allowsubmissionsfromdate', 'allowsubmissionsfromdate', 'assign');
+
+        $name = get_string('duedate', 'assign');
+        $mform->addElement('date_time_selector', 'duedate', $name, array('optional'=>true));
+        $mform->setDefault('duedate', time() + constant("weekdelay")); //give a week delay
+        $mform->addHelpButton('duedate', 'duedate', 'assign');
+
+        $name = get_string('cutoffdate', 'assign');
+        $mform->addElement('date_time_selector', 'cutoffdate', $name, array('optional'=>true));
+        $mform->addHelpButton('cutoffdate', 'cutoffdate', 'assign');
+
+        $name = get_string('gradingduedate', 'assign');
+        $mform->addElement('date_time_selector', 'gradingduedate', $name, array('optional' => true));
+        $mform->setDefault('gradingduedate', time() +  2*constant("weekdelay")); //give a two week delay
+        $mform->addHelpButton('gradingduedate', 'gradingduedate', 'assign');
+
+        $timelimitenabled = get_config('assign', 'enabletimelimit');
+        // Time limit.
+        if ($timelimitenabled) {
+            $mform->addElement('duration', 'timelimit', get_string('timelimit', 'assign'),
+                array('optional' => true));
+            $mform->addHelpButton('timelimit', 'timelimit', 'assign');
+        }
+
+        $name = get_string('alwaysshowdescription', 'assign');
+        $mform->addElement('checkbox', 'alwaysshowdescription', $name);
+        $mform->addHelpButton('alwaysshowdescription', 'alwaysshowdescription', 'assign');
+        $mform->disabledIf('alwaysshowdescription', 'allowsubmissionsfromdate[enabled]', 'notchecked');
+
+        $this->add_all_plugin_settings($mform);
+//        $mform->setExpanded('submissiontypes');
+
+        $mform->addElement('header', 'submissionsettings', get_string('submissionsettings', 'assign'));
+
+        $name = get_string('submissiondrafts', 'assign');
+        $mform->addElement('selectyesno', 'submissiondrafts', $name);
+        $mform->addHelpButton('submissiondrafts', 'submissiondrafts', 'assign');
+
+//        if ($assignment->has_submissions_or_grades()) {
+//            $mform->freeze('submissiondrafts');
+//        }
+
+        $name = get_string('requiresubmissionstatement', 'assign');
+        $mform->addElement('selectyesno', 'requiresubmissionstatement', $name);
+        $mform->addHelpButton('requiresubmissionstatement',
+            'requiresubmissionstatement',
+            'assign');
+        $mform->setType('requiresubmissionstatement', PARAM_BOOL);
+
+        $options = array(
+            ASSIGN_ATTEMPT_REOPEN_METHOD_NONE => get_string('attemptreopenmethod_none', 'mod_assign'),
+            ASSIGN_ATTEMPT_REOPEN_METHOD_MANUAL => get_string('attemptreopenmethod_manual', 'mod_assign'),
+            ASSIGN_ATTEMPT_REOPEN_METHOD_UNTILPASS => get_string('attemptreopenmethod_untilpass', 'mod_assign')
+        );
+        $mform->addElement('select', 'attemptreopenmethod', get_string('attemptreopenmethod', 'mod_assign'), $options);
+        $mform->addHelpButton('attemptreopenmethod', 'attemptreopenmethod', 'mod_assign');
+
+        $options = array(ASSIGN_UNLIMITED_ATTEMPTS => get_string('unlimitedattempts', 'mod_assign'));
+        $options += array_combine(range(1, 30), range(1, 30));
+        $mform->addElement('select', 'maxattempts', get_string('maxattempts', 'mod_assign'), $options);
+        $mform->addHelpButton('maxattempts', 'maxattempts', 'assign');
+        $mform->hideIf('maxattempts', 'attemptreopenmethod', 'eq', ASSIGN_ATTEMPT_REOPEN_METHOD_NONE);
+
+        $mform->addElement('header', 'groupsubmissionsettings', get_string('groupsubmissionsettings', 'assign'));
+
+        $name = get_string('teamsubmission', 'assign');
+        $mform->addElement('selectyesno', 'teamsubmission', $name);
+        $mform->addHelpButton('teamsubmission', 'teamsubmission', 'assign');
+//        if ($assignment->has_submissions_or_grades()) {
+//            $mform->freeze('teamsubmission');
+//        }
+
+        $name = get_string('preventsubmissionnotingroup', 'assign');
+        $mform->addElement('selectyesno', 'preventsubmissionnotingroup', $name);
+        $mform->addHelpButton('preventsubmissionnotingroup',
+            'preventsubmissionnotingroup',
+            'assign');
+        $mform->setType('preventsubmissionnotingroup', PARAM_BOOL);
+        $mform->hideIf('preventsubmissionnotingroup', 'teamsubmission', 'eq', 0);
+
+        $name = get_string('requireallteammemberssubmit', 'assign');
+        $mform->addElement('selectyesno', 'requireallteammemberssubmit', $name);
+        $mform->addHelpButton('requireallteammemberssubmit', 'requireallteammemberssubmit', 'assign');
+        $mform->hideIf('requireallteammemberssubmit', 'teamsubmission', 'eq', 0);
+        $mform->disabledIf('requireallteammemberssubmit', 'submissiondrafts', 'eq', 0);
+
+//        $groupings = groups_get_all_groupings($assignment->get_course()->id);
+//        $options = array();
+//        $options[0] = get_string('none');
+//        foreach ($groupings as $grouping) {
+//            $options[$grouping->id] = $grouping->name;
+//        }
+
+        $name = get_string('teamsubmissiongroupingid', 'assign');
+        $mform->addElement('select', 'teamsubmissiongroupingid', $name, $options);
+        $mform->addHelpButton('teamsubmissiongroupingid', 'teamsubmissiongroupingid', 'assign');
+        $mform->hideIf('teamsubmissiongroupingid', 'teamsubmission', 'eq', 0);
+//        if ($assignment->has_submissions_or_grades()) {
+//            $mform->freeze('teamsubmissiongroupingid');
+//        }
+
+        $mform->addElement('header', 'notifications', get_string('notifications', 'assign'));
+
+        $name = get_string('sendnotifications', 'assign');
+        $mform->addElement('selectyesno', 'sendnotifications', $name);
+        $mform->addHelpButton('sendnotifications', 'sendnotifications', 'assign');
+
+        $name = get_string('sendlatenotifications', 'assign');
+        $mform->addElement('selectyesno', 'sendlatenotifications', $name);
+        $mform->addHelpButton('sendlatenotifications', 'sendlatenotifications', 'assign');
+        $mform->disabledIf('sendlatenotifications', 'sendnotifications', 'eq', 1);
+
+        $name = get_string('sendstudentnotificationsdefault', 'assignquiz');
+        $mform->addElement('selectyesno', 'sendstudentnotifications', $name);
+        $mform->addHelpButton('sendstudentnotifications', 'sendstudentnotificationsdefault');
     }
+    public function add_all_plugin_settings(MoodleQuickForm $mform) {
+        $mform->addElement('header', 'submissiontypes', get_string('submissiontypes', 'assign'));
+
+        $submissionpluginsenabled = array();
+        $group = $mform->addGroup(array(), 'submissionplugins', get_string('submissiontypes', 'assign'), array(' '), false);
+        foreach ($this->submissionplugins as $plugin) {
+            $this->add_plugin_settings($plugin, $mform, $submissionpluginsenabled);
+        }
+        $group->setElements($submissionpluginsenabled);
+
+        $mform->addElement('header', 'feedbacktypes', get_string('feedbacktypes', 'assign'));
+        $feedbackpluginsenabled = array();
+        $group = $mform->addGroup(array(), 'feedbackplugins', get_string('feedbacktypes', 'assign'), array(' '), false);
+        foreach ($this->feedbackplugins as $plugin) {
+            $this->add_plugin_settings($plugin, $mform, $feedbackpluginsenabled);
+        }
+        $group->setElements($feedbackpluginsenabled);
+        $mform->setExpanded('submissiontypes');
+    }
+
+    protected function add_plugin_settings(assign_plugin $plugin, MoodleQuickForm $mform, & $pluginsenabled) {
+        global $CFG;
+        if ($plugin->is_visible() && !$plugin->is_configurable() && $plugin->is_enabled()) {
+            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
+            $pluginsenabled[] = $mform->createElement('hidden', $name, 1);
+            $mform->setType($name, PARAM_BOOL);
+            $plugin->get_settings($mform);
+        } else if ($plugin->is_visible() && $plugin->is_configurable()) {
+            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
+            $label = $plugin->get_name();
+            $pluginsenabled[] = $mform->createElement('checkbox', $name, '', $label);
+            $helpicon = $this->get_renderer()->help_icon('enabled', $plugin->get_subtype() . '_' . $plugin->get_type());
+            $pluginsenabled[] = $mform->createElement('static', '', '', $helpicon);
+
+            $default = get_config($plugin->get_subtype() . '_' . $plugin->get_type(), 'default');
+            if ($plugin->get_config('enabled') !== false) {
+                $default = $plugin->is_enabled();
+            }
+            $mform->setDefault($plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled', $default);
+
+            $plugin->get_settings($mform);
+
+        }
+    }
+
     public function quiz_form($mform){
         global $COURSE, $CFG, $DB, $PAGE;
         //$quiz_form = new mod_quiz_mod_form($this->get_current(),$this->_customdata['current'],null , $this->get_course());
@@ -410,147 +640,6 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $PAGE->requires->yui_module('moodle-mod_quiz-modform', 'M.mod_quiz.modform.init');
     }
 
-    private function assignment_form($mform){
-        global $COURSE, $CFG, $DB, $PAGE;
-        $mform->addElement('header', 'assignformtitle', get_string('aiassignconfigtitle', 'assignquiz'));
-        $mform->addElement('header', 'availability', get_string('assignmenttiming', 'assignquiz'));
-        $mform->setExpanded('availability', true);
-
-        $name = get_string('allowsubmissionsfromdate', 'assign');
-        $options = array('optional'=>true);
-        $mform->addElement('date_time_selector', 'allowsubmissionsfromdate', $name, $options);
-        $mform->setDefault('allowsubmissionsfromdate', time());
-        $mform->addHelpButton('allowsubmissionsfromdate', 'allowsubmissionsfromdate', 'assign');
-
-        $name = get_string('duedate', 'assign');
-        $mform->addElement('date_time_selector', 'duedate', $name, array('optional'=>true));
-        $mform->setDefault('duedate', time());
-        $mform->addHelpButton('duedate', 'duedate', 'assign');
-
-        $name = get_string('cutoffdate', 'assign');
-        $mform->addElement('date_time_selector', 'cutoffdate', $name, array('optional'=>true));
-        $mform->addHelpButton('cutoffdate', 'cutoffdate', 'assign');
-
-        $name = get_string('gradingduedate', 'assign');
-        $mform->addElement('date_time_selector', 'gradingduedate', $name, array('optional' => true));
-        $mform->setDefault('gradingduedate', time());
-        $mform->addHelpButton('gradingduedate', 'gradingduedate', 'assign');
-
-        $timelimitenabled = get_config('assign', 'enabletimelimit');
-        // Time limit.
-        if ($timelimitenabled) {
-            $mform->addElement('duration', 'timelimit', get_string('timelimit', 'assign'),
-                array('optional' => true));
-            $mform->addHelpButton('timelimit', 'timelimit', 'assign');
-        }
-
-        $name = get_string('alwaysshowdescription', 'assign');
-        $mform->addElement('checkbox', 'alwaysshowdescription', $name);
-        $mform->addHelpButton('alwaysshowdescription', 'alwaysshowdescription', 'assign');
-        $mform->disabledIf('alwaysshowdescription', 'allowsubmissionsfromdate[enabled]', 'notchecked');
-
-        $mform->addElement('header', 'submissiontypes', get_string('submissiontypes', 'assign'));
-
-        $submissionpluginsenabled = array();
-        $group = $mform->addGroup(array(), 'submissionplugins', get_string('submissiontypes', 'assign'), array(' '), false);
-        foreach ($this->submissionplugins as $plugin) {
-            $this->add_plugin_settings($plugin, $mform, $submissionpluginsenabled);
-        }
-        $group->setElements($submissionpluginsenabled);
-
-        $mform->addElement('header', 'feedbacktypes', get_string('feedbacktypes', 'assign'));
-        $feedbackpluginsenabled = array();
-        $group = $mform->addGroup(array(), 'feedbackplugins', get_string('feedbacktypes', 'assign'), array(' '), false);
-        foreach ($this->feedbackplugins as $plugin) {
-            $this->add_plugin_settings($plugin, $mform, $feedbackpluginsenabled);
-        }
-        $group->setElements($feedbackpluginsenabled);
-        $mform->setExpanded('submissiontypes');
-
-        $mform->addElement('header', 'submissionsettings', get_string('submissionsettings', 'assign'));
-
-        $name = get_string('submissiondrafts', 'assign');
-        $mform->addElement('selectyesno', 'submissiondrafts', $name);
-        $mform->addHelpButton('submissiondrafts', 'submissiondrafts', 'assign');
-
-//        if ($assignment->has_submissions_or_grades()) {
-//            $mform->freeze('submissiondrafts');
-//        }
-
-        $name = get_string('requiresubmissionstatement', 'assign');
-        $mform->addElement('selectyesno', 'requiresubmissionstatement', $name);
-        $mform->addHelpButton('requiresubmissionstatement',
-            'requiresubmissionstatement',
-            'assign');
-        $mform->setType('requiresubmissionstatement', PARAM_BOOL);
-
-        $options = array(
-            ASSIGN_ATTEMPT_REOPEN_METHOD_NONE => get_string('attemptreopenmethod_none', 'mod_assign'),
-            ASSIGN_ATTEMPT_REOPEN_METHOD_MANUAL => get_string('attemptreopenmethod_manual', 'mod_assign'),
-            ASSIGN_ATTEMPT_REOPEN_METHOD_UNTILPASS => get_string('attemptreopenmethod_untilpass', 'mod_assign')
-        );
-        $mform->addElement('select', 'attemptreopenmethod', get_string('attemptreopenmethod', 'mod_assign'), $options);
-        $mform->addHelpButton('attemptreopenmethod', 'attemptreopenmethod', 'mod_assign');
-
-        $options = array(ASSIGN_UNLIMITED_ATTEMPTS => get_string('unlimitedattempts', 'mod_assign'));
-        $options += array_combine(range(1, 30), range(1, 30));
-        $mform->addElement('select', 'maxattempts', get_string('maxattempts', 'mod_assign'), $options);
-        $mform->addHelpButton('maxattempts', 'maxattempts', 'assign');
-        $mform->hideIf('maxattempts', 'attemptreopenmethod', 'eq', ASSIGN_ATTEMPT_REOPEN_METHOD_NONE);
-
-        $mform->addElement('header', 'groupsubmissionsettings', get_string('groupsubmissionsettings', 'assign'));
-
-        $name = get_string('teamsubmission', 'assign');
-        $mform->addElement('selectyesno', 'teamsubmission', $name);
-        $mform->addHelpButton('teamsubmission', 'teamsubmission', 'assign');
-//        if ($assignment->has_submissions_or_grades()) {
-//            $mform->freeze('teamsubmission');
-//        }
-
-        $name = get_string('preventsubmissionnotingroup', 'assign');
-        $mform->addElement('selectyesno', 'preventsubmissionnotingroup', $name);
-        $mform->addHelpButton('preventsubmissionnotingroup',
-            'preventsubmissionnotingroup',
-            'assign');
-        $mform->setType('preventsubmissionnotingroup', PARAM_BOOL);
-        $mform->hideIf('preventsubmissionnotingroup', 'teamsubmission', 'eq', 0);
-
-        $name = get_string('requireallteammemberssubmit', 'assign');
-        $mform->addElement('selectyesno', 'requireallteammemberssubmit', $name);
-        $mform->addHelpButton('requireallteammemberssubmit', 'requireallteammemberssubmit', 'assign');
-        $mform->hideIf('requireallteammemberssubmit', 'teamsubmission', 'eq', 0);
-        $mform->disabledIf('requireallteammemberssubmit', 'submissiondrafts', 'eq', 0);
-
-//        $groupings = groups_get_all_groupings($assignment->get_course()->id);
-//        $options = array();
-//        $options[0] = get_string('none');
-//        foreach ($groupings as $grouping) {
-//            $options[$grouping->id] = $grouping->name;
-//        }
-
-        $name = get_string('teamsubmissiongroupingid', 'assign');
-        $mform->addElement('select', 'teamsubmissiongroupingid', $name, $options);
-        $mform->addHelpButton('teamsubmissiongroupingid', 'teamsubmissiongroupingid', 'assign');
-        $mform->hideIf('teamsubmissiongroupingid', 'teamsubmission', 'eq', 0);
-//        if ($assignment->has_submissions_or_grades()) {
-//            $mform->freeze('teamsubmissiongroupingid');
-//        }
-
-        $mform->addElement('header', 'notifications', get_string('notifications', 'assign'));
-
-        $name = get_string('sendnotifications', 'assign');
-        $mform->addElement('selectyesno', 'sendnotifications', $name);
-        $mform->addHelpButton('sendnotifications', 'sendnotifications', 'assign');
-
-        $name = get_string('sendlatenotifications', 'assign');
-        $mform->addElement('selectyesno', 'sendlatenotifications', $name);
-        $mform->addHelpButton('sendlatenotifications', 'sendlatenotifications', 'assign');
-        $mform->disabledIf('sendlatenotifications', 'sendnotifications', 'eq', 1);
-
-        $name = get_string('sendstudentnotificationsdefault', 'assignquiz');
-        $mform->addElement('selectyesno', 'sendstudentnotifications', $name);
-        $mform->addHelpButton('sendstudentnotifications', 'sendstudentnotificationsdefault');
-    }
 
 
     protected function add_review_options_group($mform, $quizconfig, $whenname,
@@ -590,64 +679,61 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         }
     }
 
-    protected function add_plugin_settings(assign_plugin $plugin, MoodleQuickForm $mform, & $pluginsenabled) {
-        global $CFG;
-        if ($plugin->is_visible() && !$plugin->is_configurable() && $plugin->is_enabled()) {
-            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
-            $pluginsenabled[] = $mform->createElement('hidden', $name, 1);
-            $mform->setType($name, PARAM_BOOL);
-            $plugin->get_settings($mform);
-        } else if ($plugin->is_visible() && $plugin->is_configurable()) {
-            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
-            $label = $plugin->get_name();
-            $pluginsenabled[] = $mform->createElement('checkbox', $name, '', $label);
-            $helpicon = $this->get_renderer()->help_icon('enabled', $plugin->get_subtype() . '_' . $plugin->get_type());
-            $pluginsenabled[] = $mform->createElement('static', '', '', $helpicon);
-
-            $default = get_config($plugin->get_subtype() . '_' . $plugin->get_type(), 'default');
-            if ($plugin->get_config('enabled') !== false) {
-                $default = $plugin->is_enabled();
-            }
-            $mform->setDefault($plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled', $default);
-
-            $plugin->get_settings($mform);
-
-        }
-    }
     /**
      * Defines form behaviour after being defined
      */
     public function definition_after_data() {
         parent::definition_after_data();
+    }
+    public function data_preprocessing(&$defaultvalues) {
+        global $DB;
 
-        $mform = $this->_form;
-        //$this->assignment_availability_modif($mform);
-//        $this->submission_settings_modif($mform);
-//        $this->group_submissions_modif($mform);
-//        $this->notifications_modif($mform);
+        $cmid = $this->_instance;
+        $assignexists = $DB->get_record('aiassign', array('assignquizid' => $cmid));
+        $quizexists = $DB->get_record('aiquiz', array('assignquizid' => $cmid));
+        $assignquizexists = $DB->get_record('assignquiz', array('id' => $cmid));
 
+        if($cmid && $quizexists && $assignexists){
+            $elementdraftitemid = file_get_submitted_draft_itemid('requiredknowledge');
+
+            $defaultvalues['requiredknowledge'] = array(
+                'text' => $assignquizexists->requiredknowledge,
+                'format' => $assignquizexists->requiredknowledgeformat,
+                'itemid' => $elementdraftitemid
+            );
+            $this->assign_preprocessing($assignexists, $defaultvalues);
+            $this->quiz_preprocessing($quizexists, $defaultvalues);
+        }
     }
 
-    private function assignment_availability_modif($mform){
-        $availability = $mform->getElement('availability');
-        $allowsubmissionsfromdate = $mform->getElement('allowsubmissionsfromdate');
-        $duedate = $mform->getElement('duedate');
-        $cutoffdate = $mform->getElement('cutoffdate');
-        $gradingduedate = $mform->getElement('gradingduedate');
-        $alwaysshowdescription = $mform->getElement('alwaysshowdescription');
+    public function assign_preprocessing($assigndata, &$defaultvalues) {
+        $elementdraftitemid = file_get_submitted_draft_itemid('activityeditor');
+        $defaultvalues['activityeditor'] = array(
+            'text' => $assigndata->activity,
+            'format' => $assigndata->activityformat,
+            'itemid' => $elementdraftitemid
+        );
+        $elementdraftitemid = file_get_submitted_draft_itemid('assignintro');
 
-        $mform->removeElement('availability');
-        $mform->removeElement('allowsubmissionsfromdate');
-        $mform->removeElement('duedate');
-        $mform->removeElement('cutoffdate');
-        $mform->removeElement('gradingduedate');
-        $mform->removeElement('alwaysshowdescription');
-
-        $mform->insertElementBefore($allowsubmissionsfromdate, 'assignformtitle');
-        $mform->insertElementBefore($duedate, 'assignformtitle');
-        $mform->insertElementBefore($cutoffdate, 'assignformtitle');
-        $mform->insertElementBefore($gradingduedate, 'assignformtitle');
-        $mform->insertElementBefore($alwaysshowdescription, 'assignformtitle');
+        $defaultvalues['assignintro'] = array(
+            'text' => $assigndata->assignintro,
+            'format' => $assigndata->assignintroformat,
+            'itemid' => $elementdraftitemid
+        );
+        $defaultvalues['duedate'] = $assigndata->duedate;
+        $defaultvalues['cutoffdate'] = $assigndata->cutoffdate;
+        $defaultvalues['allowsubmissionsfromdate'] = $assigndata->allowsubmissionsfromdate;
+        $defaultvalues['gradeduedate'] = $assigndata->gradeduedate;
+        $defaultvalues['alwaysshowdescription'] = $assigndata->alwaysshowdescription;
+        $defaultvalues['showdescription'] = is_null($assigndata->alwaysshowdescription) ? null : 1;
+        error_log('ON PREPROCESSING: '.print_r($defaultvalues,true));
     }
-
+    public function quiz_preprocessing($assigndata, &$defaultvalues) {
+        $elementdraftitemid = file_get_submitted_draft_itemid('quizintro');
+        $defaultvalues['quizintro'] = array(
+            'text' => $assigndata->quizintro,
+            'format' => $assigndata->quizintroformat,
+            'itemid' => $elementdraftitemid
+        );
+    }
 }

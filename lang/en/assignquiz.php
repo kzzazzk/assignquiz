@@ -43,16 +43,29 @@ Quizzes may be used
 * For customized self-assessment';
 $string['aiquizname'] = '';
 $string['aiquizfieldset'] = 'Settings';
-$string['assignmenttiming'] = 'Assignment Availability';
+$string['assignmenttiming'] = 'Availability';
 $string['assignmentname'] = 'Task name';
-$string['activityeditor'] = 'Assignment submission instructions';
+$string['assigninstructions'] = 'Assignment submission instructions';
+$string['assigninstructions_help'] = 'The actions you would like the student to complete for this assignment. This is only shown on the submission page where a student edits and submits their assignment.';
 $string['activityname'] = 'Activity name';
-$string['quiztiming'] = 'Quiz Timing';
+$string['quiztiming'] = 'Timing';
+$string['dynamic'] = 'Dynamic';
+$string['static'] = 'Static';
+$string['descriptiontype'] = 'Description type';
+$string['descriptiontype_help'] = "Types of descriptions:
+ 
+* Static description <b> will not change </b> depending on the activity phase.
+* Dynamic description <b> will change </b> from the activity's submission phase to the quiz phase.";
 $string['activitydescription'] = 'Required knowledge';
+$string['submissionphasedescription'] = 'Submission phase description';
+$string['quizphasedescription'] = 'Quiz phase description';
+$string['description'] = 'Description';
 $string['requiredknowledge_help'] = 'Describe in detail what knowledge is required for the users to properly meet with the standards of grading.';
+$string['activityeditor_help'] = 'The actions you would like the student to complete for this assignment. This is only shown on the submission page where a student edits and submits their assignment.';
 $string['aiassignconfigtitle'] = 'Assignment Configuration';
 $string['aiquizconfigtitle'] = 'AI Quiz Configuration';
 $string['coursemoduleconfigtitle'] = 'Other course module settings';
+$string['basicsettings'] = 'Basic settings';
 $string['aiquiz:view'] = 'Ability to see that the AssignQuiz exists, and the basic information
 about it, for example the start date and time limit.';
 $string['aiquiz:addinstance'] = 'Ability to add a new AssignQuiz to the course.';

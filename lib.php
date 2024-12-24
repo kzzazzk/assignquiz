@@ -23,6 +23,8 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
+const PHASE_SUBMISSION = 1;
+const PHASE_QUIZ = 2;
 
 require_once($CFG->dirroot . '/mod/assignquiz/accessmanager.php');
 
@@ -33,7 +35,8 @@ require_once($CFG->dirroot . '/mod/assignquiz/accessmanager.php');
  * @return true | null True if the feature is supported, null otherwise.
  */
 
-function assignquiz_supports($feature) {
+function assignquiz_supports($feature)
+{
     switch ($feature) {
         case FEATURE_PLAGIARISM:
             return true;
@@ -43,6 +46,7 @@ function assignquiz_supports($feature) {
             return FEATURE_GRADE_HAS_GRADE;
     }
 }
+
 /**
  * Saves a new instance of the mod_aiquiz into the database.
  *
@@ -54,9 +58,36 @@ function assignquiz_supports($feature) {
  * @param mod_aiquiz_mod_form $mform The form.
  * @return int The id of the newly inserted record.
  */
-function assignquiz_add_instance($moduleinstance ,$mform = null) {
-    error_log('FORM VALUE= '.print_r($moduleinstance, true));
+function assignquiz_add_instance($moduleinstance, $mform = null)
+{
     global $DB;
+    $moduleinstance->phase = constant('PHASE_SUBMISSION');
+    $moduleinstance->timecreated = time();
+
+    $moduleinstance->requiredknowledgeformat = $moduleinstance->requiredknowledge['format'];
+
+    $moduleinstance->requiredknowledge = $moduleinstance->requiredknowledge['text'];
+
+    $moduleinstance->assignintroformat = $moduleinstance->assignintro['format'];
+
+    $moduleinstance->assignintro = $moduleinstance->assignintro['text'];
+
+    $moduleinstance->activity = $moduleinstance->activityeditor['text'];
+
+    $moduleinstance->activityformat = $moduleinstance->activityeditor['format'];
+
+    $moduleinstance->quizintroformat = $moduleinstance->quizintro['format'];
+
+    $moduleinstance->quizintro = $moduleinstance->quizintro['text'];
+
+    if ($moduleinstance->showdescription) {
+        if ($moduleinstance->alwaysshowdescription || time() > $moduleinstance->allowsubmissionsfromdate) {
+            $moduleinstance->alwaysshowdescription = 1;
+        } else {
+            $moduleinstance->alwaysshowdescription = 0;
+        }
+    }
+
     $assignquizid = $DB->insert_record('assignquiz', $moduleinstance);
 
     $assign_id = $DB->insert_record('aiassign', $moduleinstance);
@@ -70,10 +101,11 @@ function assignquiz_add_instance($moduleinstance ,$mform = null) {
     return $assignquizid;
 }
 
-function assignquiz_after_add_or_update($aiquiz) {
+function aiquiz_after_add_or_update($aiquiz)
+{
 
     global $DB;
-    error_log('ASSIGNQUIZ COURSE MODULE = '.print_r($aiquiz, true));
+    error_log('ASSIGNQUIZ COURSE MODULE = ' . print_r($aiquiz, true));
 
     // We need to use context now, so we need to make sure all needed info is already in db.
     $DB->set_field('course_modules', 'instance', $aiquiz->id, array('id' => $aiquiz->coursemodule));
@@ -109,6 +141,7 @@ function assignquiz_after_add_or_update($aiquiz) {
     // Update related grade item.
     quiz_grade_item_update($aiquiz);
 }
+
 /**
  * Updates an instance of the mod_aiquiz in the database.
  *
@@ -119,13 +152,39 @@ function assignquiz_after_add_or_update($aiquiz) {
  * @param mod_aiquiz_mod_form $mform The form.
  * @return bool True if successful, false otherwise.
  */
-function assignquiz_update_instance($moduleinstance, $mform = null) {
+function assignquiz_update_instance($moduleinstance, $mform = null)
+{
+
     global $DB;
     $moduleinstance->timemodified = time();
-    $moduleinstance->id = $DB->get_field('assignquiz','id', array('id' => $moduleinstance->instance));
+
+    $moduleinstance->requiredknowledgeformat = $moduleinstance->requiredknowledge['format'];
+    $moduleinstance->requiredknowledge = $moduleinstance->requiredknowledge['text'];
+
+    $moduleinstance->assignintroformat = $moduleinstance->assignintro['format'];
+    $moduleinstance->assignintro = $moduleinstance->assignintro['text'];
+
+    $moduleinstance->activity = $moduleinstance->activityeditor['text'];
+    $moduleinstance->activityformat = $moduleinstance->activityeditor['format'];
+
+    $moduleinstance->quizintroformat = $moduleinstance->quizintro['format'];
+    $moduleinstance->quizintro = $moduleinstance->quizintro['text'];
+
+    if ($moduleinstance->showdescription) {
+        if ($moduleinstance->alwaysshowdescription || time() > $moduleinstance->allowsubmissionsfromdate) {
+            $moduleinstance->alwaysshowdescription = 1;
+        } else {
+            $moduleinstance->alwaysshowdescription = 0;
+        }
+    }
+    error_log('ON UPDATE = ' . print_r($moduleinstance, true));
+
+    $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
     $DB->update_record('aiquiz', $moduleinstance);
-    $moduleinstance->id = $DB->get_field('assignquiz','id', array('id' => $moduleinstance->instance));
+    $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
+
     $DB->update_record('aiassign', $moduleinstance);
+
     $moduleinstance->id = $moduleinstance->instance;
     return $DB->update_record('assignquiz', $moduleinstance);
 }
@@ -136,22 +195,20 @@ function assignquiz_update_instance($moduleinstance, $mform = null) {
  * @param int $id Id of the module instance.
  * @return bool True if successful, false on failure.
  */
-function assignquiz_delete_instance($id) {
+function assignquiz_delete_instance($id)
+{
     global $DB;
 
-    $quiz_id = $DB->get_field('assignquiz','quiz_id', array('id' => $id));
-    $assign_id = $DB->get_field('assignquiz','assignment_id', array('id' => $id));
-
-    $exists_quiz = $DB->get_record('aiquiz', array('id' => $quiz_id));
-    $exists_assign = $DB->get_record('aiassign', array('id' => $assign_id));
+    $exists_quiz = $DB->get_record('aiquiz', array('assignquizid' => $id));
+    $exists_assign = $DB->get_record('aiassign', array('assignquizid' => $id));
     $exists_assignquiz = $DB->get_record('assignquiz', array('id' => $id));
 
-    if (!$exists_quiz || !$exists_assign || !$exists_assignquiz ) {
+    if (!$exists_quiz || !$exists_assign || !$exists_assignquiz) {
         return false;
     }
 
-    $DB->delete_records('aiquiz', array('id' => $quiz_id));
-    $DB->delete_records('aiassign', array('id' => $assign_id));
+    $DB->delete_records('aiquiz', array('assignquizid' => $id));
+    $DB->delete_records('aiassign', array('assignquizid' => $id));
     $DB->delete_records('assignquiz', array('id' => $id));
 
     return true;
