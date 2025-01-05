@@ -54,7 +54,8 @@ $string['aiquiz:view'] = 'Ability to see that the AssignQuiz exists, and the bas
 about it, for example the start date and time limit.';
 $string['availablefrom'] = 'Available from';
 $string['availableuntil'] = 'Available until';
-$string['availablefromuntil'] = 'Available from {$a->open} to {$a->close}';
+$string['availablefromuntilassign'] = '<b>Opened:</b> {$a->open} <br>
+<b>Due:</b> {$a->due}';
 $string['aiquiz:addinstance'] = 'Ability to add a new AssignQuiz to the course.';
 $string['aiquiz:attempt'] = 'Ability to do the AssignQuiz as a student.';
 $string['aiquiz:reviewmyattempts'] = 'Ability for a student to review their previous attempts.';

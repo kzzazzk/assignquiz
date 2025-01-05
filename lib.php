@@ -23,6 +23,8 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
+global $CFG;
+
 const PHASE_SUBMISSION = 1;
 const PHASE_QUIZ = 2;
 
@@ -46,6 +48,8 @@ function assignquiz_supports($feature)
             return MOD_PURPOSE_ASSESSMENT;
         case FEATURE_GRADE_HAS_GRADE:
             return FEATURE_GRADE_HAS_GRADE;
+        case FEATURE_SHOW_DESCRIPTION:
+            return true;
     }
 }
 
@@ -64,17 +68,11 @@ function assignquiz_add_instance($moduleinstance, $mform = null)
 {
     error_log('Submitted Data for add_instance: ' . print_r($moduleinstance, true));
     global $DB;
-    $moduleinstance->phase = PHASE_SUBMISSION;
     $moduleinstance->timecreated = time();
     recreate_editors($moduleinstance);
-    $phase = $DB->get_field('assignquiz', 'phase', array('id' => $moduleinstance->instance));
-    if($phase == PHASE_SUBMISSION){
-        $moduleinstance->intro = $moduleinstance->assignintro;
-        $moduleinstance->introformat = $moduleinstance->assignintroformat;
-    }else if($phase == PHASE_QUIZ){
-        $moduleinstance->intro = $moduleinstance->quizintro;
-        $moduleinstance->introformat = $moduleinstance->quizintroformat;
-    }
+    $moduleinstance->intro = $moduleinstance->assignintro;
+    $moduleinstance->introformat = $moduleinstance->assignintroformat;
+
 
     $assignquizid = $DB->insert_record('assignquiz', $moduleinstance);
 
@@ -117,45 +115,6 @@ function recreate_editors(object $moduleinstance): void
     }
 }
 
-function aiquiz_after_add_or_update($aiquiz)
-{
-
-    global $DB;
-
-    // We need to use context now, so we need to make sure all needed info is already in db.
-    $DB->set_field('course_modules', 'instance', $aiquiz->id, array('id' => $aiquiz->coursemodule));
-    $context = context_module::instance($aiquiz->coursemodule);
-
-    // Save the feedback.
-    $DB->delete_records('aiquiz_feedback', array('quizid' => $aiquiz->id));
-
-    for ($i = 0; $i <= $aiquiz->feedbackboundarycount; $i++) {
-        $feedback = new stdClass();
-        $feedback->quizid = $aiquiz->id;
-        $feedback->feedbacktext = $aiquiz->feedbacktext[$i]['text'];
-        $feedback->feedbacktextformat = $aiquiz->feedbacktext[$i]['format'];
-        $feedback->mingrade = $aiquiz->feedbackboundaries[$i];
-        $feedback->maxgrade = $aiquiz->feedbackboundaries[$i - 1];
-        $feedback->id = $DB->insert_record('aiquiz_feedback', $feedback);
-        $feedbacktext = file_save_draft_area_files((int)$aiquiz->feedbacktext[$i]['itemid'],
-            $context->id, 'mod_aiquiz', 'feedback', $feedback->id,
-            array('subdirs' => false, 'maxfiles' => -1, 'maxbytes' => 0),
-            $aiquiz->feedbacktext[$i]['text']);
-        $DB->set_field('aiquiz_feedback', 'feedbacktext', $feedbacktext,
-            array('id' => $feedback->id));
-    }
-
-    // Store any settings belonging to the access rules.
-    aiquiz_access_manager::save_settings($aiquiz);
-
-    // Update the events relating to this quiz.
-    quiz_update_events($aiquiz);
-    $completionexpected = (!empty($aiquiz->completionexpected)) ? $aiquiz->completionexpected : null;
-    \core_completion\api::update_completion_date_event($aiquiz->coursemodule, 'aiquiz', $aiquiz->id, $completionexpected);
-
-    // Update related grade item.
-    quiz_grade_item_update($aiquiz);
-}
 
 /**
  * Updates an instance of the mod_aiquiz in the database.
@@ -178,6 +137,7 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
 
 
     $moduleinstance->intro = $moduleinstance->assignintro;
+    $moduleinstance->introformat = $moduleinstance->assignintroformat;
 
 
     $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
@@ -239,20 +199,70 @@ function assignquiz_get_coursemodule_info($coursemodule) {
     $info->name = $record->name;
 
     // Add availability (open/close) information if set.
-
-    if ($record->timeopen && $record->timeclose) {
-        $info->content = get_string('availablefromuntil', 'assignquiz',
-            array(
-                'open' => userdate($record->timeopen),
-                'close' => userdate($record->timeclose),
-            )
-        );
-    } else if ($record->timeopen) {
+   // if ($record->timeopen && $record->timeclose) {
+        if ($record->phase == PHASE_SUBMISSION) {
+            $info->content = get_string('availablefromuntilassign', 'assignquiz',
+                array(
+                    'open' => userdate($record->allowsubmissionsfromdate),
+                    'due' => userdate($record->duedate),
+                )
+            );
+        } else if ($record->phase == PHASE_QUIZ) {
+            $info->content = get_string('availablefromuntilquiz', 'assignquiz',
+                array(
+                    'open' => userdate($record->timeopen),
+                    'close' => userdate($record->timeclose),
+                )
+            );
+        }
+    //}
+    elseif ($record->timeopen) {
         $info->content = get_string('availablefrom', 'assignquiz', userdate($record->timeopen));
-    } else if ($record->timeclose) {
+    }
+    elseif ($record->timeclose) {
         $info->content = get_string('availableuntil', 'assignquiz', userdate($record->timeclose));
     }
 
     // Return the course module info.
     return $info;
 }
+
+//function aiquiz_after_add_or_update($aiquiz)
+//{
+//
+//    global $DB;
+//
+//    // We need to use context now, so we need to make sure all needed info is already in db.
+//    $DB->set_field('course_modules', 'instance', $aiquiz->id, array('id' => $aiquiz->coursemodule));
+//    $context = context_module::instance($aiquiz->coursemodule);
+//
+//    // Save the feedback.
+//    $DB->delete_records('aiquiz_feedback', array('quizid' => $aiquiz->id));
+//
+//    for ($i = 0; $i <= $aiquiz->feedbackboundarycount; $i++) {
+//        $feedback = new stdClass();
+//        $feedback->quizid = $aiquiz->id;
+//        $feedback->feedbacktext = $aiquiz->feedbacktext[$i]['text'];
+//        $feedback->feedbacktextformat = $aiquiz->feedbacktext[$i]['format'];
+//        $feedback->mingrade = $aiquiz->feedbackboundaries[$i];
+//        $feedback->maxgrade = $aiquiz->feedbackboundaries[$i - 1];
+//        $feedback->id = $DB->insert_record('aiquiz_feedback', $feedback);
+//        $feedbacktext = file_save_draft_area_files((int)$aiquiz->feedbacktext[$i]['itemid'],
+//            $context->id, 'mod_aiquiz', 'feedback', $feedback->id,
+//            array('subdirs' => false, 'maxfiles' => -1, 'maxbytes' => 0),
+//            $aiquiz->feedbacktext[$i]['text']);
+//        $DB->set_field('aiquiz_feedback', 'feedbacktext', $feedbacktext,
+//            array('id' => $feedback->id));
+//    }
+//
+//    // Store any settings belonging to the access rules.
+//    aiquiz_access_manager::save_settings($aiquiz);
+//
+//    // Update the events relating to this quiz.
+//    quiz_update_events($aiquiz);
+//    $completionexpected = (!empty($aiquiz->completionexpected)) ? $aiquiz->completionexpected : null;
+//    \core_completion\api::update_completion_date_event($aiquiz->coursemodule, 'aiquiz', $aiquiz->id, $completionexpected);
+//
+//    // Update related grade item.
+//    quiz_grade_item_update($aiquiz);
+//}

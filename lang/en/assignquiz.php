@@ -24,8 +24,8 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-$string['pluginname'] = 'AssignQuiz';
-$string['modulename'] = 'AssignQuiz';
+$string['pluginname'] = 'Assign Quiz';
+$string['modulename'] = 'Assign Quiz';
 $string['modulenameplural'] = 'AssignQuizzes';
 $string['modulename_help'] = 'The AssignQuiz plugin enables teachers to create personalized quizzes with AI-generated questions based on student-uploaded content. It includes all standard quiz features plus:
 
@@ -51,15 +51,13 @@ $string['activityname'] = 'Activity name';
 $string['quiztiming'] = 'Timing';
 $string['dynamic'] = 'Dynamic';
 $string['static'] = 'Static';
-$string['descriptiontype'] = 'Description type';
-$string['descriptiontype_help'] = "Types of descriptions:
- 
-* Static description <b> will not change </b> depending on the activity phase.
-* Dynamic description <b> will change </b> from the activity's submission phase to the quiz phase.";
 $string['activitydescription'] = 'Required knowledge';
-$string['availablefrom'] = 'Available from';
-$string['availableuntil'] = 'Available until';
-$string['availablefromuntil'] = 'AAAAAAAAAAAAAAA $open $close';
+$string['availablefrom'] = 'Available from {$a->open}';
+$string['availableuntil'] = 'Available until {$a->close}';
+$string['availablefromuntilassign'] = '<b>Opened:</b> {$a->open}<br>
+<b>Due:</b> {$a->due}';
+$string['availablefromuntilquiz'] = '<b>Opened:</b> {$a->open}<br>
+<b>Close:</b> {$a->close}';
 $string['submissionphasedescription'] = 'Submission phase description';
 $string['quizphasedescription'] = 'Quiz phase description';
 $string['description'] = 'Description';
