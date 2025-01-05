@@ -57,6 +57,9 @@ $string['descriptiontype_help'] = "Types of descriptions:
 * Static description <b> will not change </b> depending on the activity phase.
 * Dynamic description <b> will change </b> from the activity's submission phase to the quiz phase.";
 $string['activitydescription'] = 'Required knowledge';
+$string['availablefrom'] = 'Available from';
+$string['availableuntil'] = 'Available until';
+$string['availablefromuntil'] = 'AAAAAAAAAAAAAAA $open $close';
 $string['submissionphasedescription'] = 'Submission phase description';
 $string['quizphasedescription'] = 'Quiz phase description';
 $string['description'] = 'Description';

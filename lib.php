@@ -26,6 +26,8 @@ defined('MOODLE_INTERNAL') || die();
 const PHASE_SUBMISSION = 1;
 const PHASE_QUIZ = 2;
 
+
+
 require_once($CFG->dirroot . '/mod/assignquiz/accessmanager.php');
 
 /**
@@ -60,35 +62,22 @@ function assignquiz_supports($feature)
  */
 function assignquiz_add_instance($moduleinstance, $mform = null)
 {
+    error_log('Submitted Data for add_instance: ' . print_r($moduleinstance, true));
     global $DB;
-    $moduleinstance->phase = constant('PHASE_SUBMISSION');
+    $moduleinstance->phase = PHASE_SUBMISSION;
     $moduleinstance->timecreated = time();
-
-    $moduleinstance->requiredknowledgeformat = $moduleinstance->requiredknowledge['format'];
-
-    $moduleinstance->requiredknowledge = $moduleinstance->requiredknowledge['text'];
-
-    $moduleinstance->assignintroformat = $moduleinstance->assignintro['format'];
-
-    $moduleinstance->assignintro = $moduleinstance->assignintro['text'];
-
-    $moduleinstance->activity = $moduleinstance->activityeditor['text'];
-
-    $moduleinstance->activityformat = $moduleinstance->activityeditor['format'];
-
-    $moduleinstance->quizintroformat = $moduleinstance->quizintro['format'];
-
-    $moduleinstance->quizintro = $moduleinstance->quizintro['text'];
-
-    if ($moduleinstance->showdescription) {
-        if ($moduleinstance->alwaysshowdescription || time() > $moduleinstance->allowsubmissionsfromdate) {
-            $moduleinstance->alwaysshowdescription = 1;
-        } else {
-            $moduleinstance->alwaysshowdescription = 0;
-        }
+    recreate_editors($moduleinstance);
+    $phase = $DB->get_field('assignquiz', 'phase', array('id' => $moduleinstance->instance));
+    if($phase == PHASE_SUBMISSION){
+        $moduleinstance->intro = $moduleinstance->assignintro;
+        $moduleinstance->introformat = $moduleinstance->assignintroformat;
+    }else if($phase == PHASE_QUIZ){
+        $moduleinstance->intro = $moduleinstance->quizintro;
+        $moduleinstance->introformat = $moduleinstance->quizintroformat;
     }
 
     $assignquizid = $DB->insert_record('assignquiz', $moduleinstance);
+
 
     $assign_id = $DB->insert_record('aiassign', $moduleinstance);
     $moduleinstance->assignment_id = $assign_id;
@@ -101,11 +90,37 @@ function assignquiz_add_instance($moduleinstance, $mform = null)
     return $assignquizid;
 }
 
+/**
+ * @param object $moduleinstance
+ * @return void
+ */
+function recreate_editors(object $moduleinstance): void
+{
+    $moduleinstance->introformat = $moduleinstance->intro['format'];
+    $moduleinstance->intro = $moduleinstance->intro['text'];
+
+    $moduleinstance->assignintroformat = $moduleinstance->assignintro['format'];
+    $moduleinstance->assignintro = $moduleinstance->assignintro['text'];
+
+    $moduleinstance->activity = $moduleinstance->activityeditor['text'];
+    $moduleinstance->activityformat = $moduleinstance->activityeditor['format'];
+
+    $moduleinstance->quizintroformat = $moduleinstance->quizintro['format'];
+    $moduleinstance->quizintro = $moduleinstance->quizintro['text'];
+
+    if ($moduleinstance->showdescription) {
+        if ($moduleinstance->alwaysshowdescription || time() > $moduleinstance->allowsubmissionsfromdate) {
+            $moduleinstance->alwaysshowdescription = 1;
+        } else {
+            $moduleinstance->alwaysshowdescription = 0;
+        }
+    }
+}
+
 function aiquiz_after_add_or_update($aiquiz)
 {
 
     global $DB;
-    error_log('ASSIGNQUIZ COURSE MODULE = ' . print_r($aiquiz, true));
 
     // We need to use context now, so we need to make sure all needed info is already in db.
     $DB->set_field('course_modules', 'instance', $aiquiz->id, array('id' => $aiquiz->coursemodule));
@@ -156,19 +171,24 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
 {
 
     global $DB;
+    recreate_editors($moduleinstance);
+
+
     $moduleinstance->timemodified = time();
 
-    $moduleinstance->requiredknowledgeformat = $moduleinstance->requiredknowledge['format'];
-    $moduleinstance->requiredknowledge = $moduleinstance->requiredknowledge['text'];
 
-    $moduleinstance->assignintroformat = $moduleinstance->assignintro['format'];
-    $moduleinstance->assignintro = $moduleinstance->assignintro['text'];
+    $moduleinstance->intro = $moduleinstance->assignintro;
 
-    $moduleinstance->activity = $moduleinstance->activityeditor['text'];
-    $moduleinstance->activityformat = $moduleinstance->activityeditor['format'];
 
-    $moduleinstance->quizintroformat = $moduleinstance->quizintro['format'];
-    $moduleinstance->quizintro = $moduleinstance->quizintro['text'];
+    $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
+    $DB->update_record('aiquiz', $moduleinstance);
+
+    $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
+    $DB->update_record('aiassign', $moduleinstance);
+
+    $moduleinstance->id = $moduleinstance->instance;
+
+
 
     if ($moduleinstance->showdescription) {
         if ($moduleinstance->alwaysshowdescription || time() > $moduleinstance->allowsubmissionsfromdate) {
@@ -177,15 +197,6 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
             $moduleinstance->alwaysshowdescription = 0;
         }
     }
-    error_log('ON UPDATE = ' . print_r($moduleinstance, true));
-
-    $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
-    $DB->update_record('aiquiz', $moduleinstance);
-    $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
-
-    $DB->update_record('aiassign', $moduleinstance);
-
-    $moduleinstance->id = $moduleinstance->instance;
     return $DB->update_record('assignquiz', $moduleinstance);
 }
 
@@ -212,4 +223,36 @@ function assignquiz_delete_instance($id)
     $DB->delete_records('assignquiz', array('id' => $id));
 
     return true;
+}
+
+
+function assignquiz_get_coursemodule_info($coursemodule) {
+    global $DB;
+
+    // Fetch your plugin's record from the database.
+    $record = $DB->get_record('assignquiz', array('id' => $coursemodule->instance), '*', MUST_EXIST);
+
+    // Create a new course module info object.
+    $info = new cached_cm_info();
+
+    // Set the name of the activity (this is required).
+    $info->name = $record->name;
+
+    // Add availability (open/close) information if set.
+
+    if ($record->timeopen && $record->timeclose) {
+        $info->content = get_string('availablefromuntil', 'assignquiz',
+            array(
+                'open' => userdate($record->timeopen),
+                'close' => userdate($record->timeclose),
+            )
+        );
+    } else if ($record->timeopen) {
+        $info->content = get_string('availablefrom', 'assignquiz', userdate($record->timeopen));
+    } else if ($record->timeclose) {
+        $info->content = get_string('availableuntil', 'assignquiz', userdate($record->timeclose));
+    }
+
+    // Return the course module info.
+    return $info;
 }

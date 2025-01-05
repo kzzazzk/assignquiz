@@ -70,7 +70,7 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 
         $mform->addElement('editor', $elementname, $customlabel, array('rows' => 10), array('maxfiles' => EDITOR_UNLIMITED_FILES,
             'noclean' => true, 'context' => $this->context, 'subdirs' => true));
-        $mform->setType($elementname, PARAM_RAW); // no XSS prevention here, users must be trusted
+        $mform->setType($elementname, PARAM_TEXT); // no XSS prevention here, users must be trusted
         if ($required) {
             $mform->addRule($elementname, get_string('required'), 'required', null, 'client');
         }
@@ -96,7 +96,7 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         }
         $mform->addRule('name', null, 'required', null, 'client');
         $mform->addRule('name', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
-        $mform->addElement('textarea', 'requiredknowledge', get_string('activitydescription','assignquiz'), 'wrap="virtual" rows="3" cols="50"');
+        $mform->addElement('textarea', 'requiredknowledge', get_string('activitydescription', 'assignquiz'), 'wrap="virtual" rows="3" cols="50"');
         $mform->setType('requiredknowledge', PARAM_RAW); // no XSS prevention here, users must be trusted
 
         /*
@@ -104,49 +104,8 @@ class mod_assignquiz_mod_form extends moodleform_mod {
             $mform->addRule('introeditor', get_string('required'), 'required', null, 'client');
         }
         */
-        // Add the select dropdown for description type
-        $DESCRIPTION_TYPE = [
-            'Static' => get_string('static', 'assignquiz'),
-            'Dynamic' => get_string('dynamic', 'assignquiz')
-        ];
-        $mform->addElement('select', 'descriptiontype', get_string('descriptiontype', 'assignquiz'), $DESCRIPTION_TYPE);
-        $mform->addHelpButton('descriptiontype', 'descriptiontype', 'assignquiz');
         $this->standard_intro_elements(get_string('submissionphasedescription', 'assignquiz'), 'assignintro');
-        $this->standard_intro_elements(get_string('quizphasedescription', 'assignquiz'), 'quizintro');
-        $this->standard_intro_elements(get_string('description', 'assignquiz'), 'intro', true);
-
-        $PAGE->requires->js_init_code(
-        "require(['jquery'], function($) {
-                    function updateEditorVisibility() {
-                        var selectedValue = $('#id_descriptiontype').val();
-            
-                        if (selectedValue === 'Static') {
-                            // Hide 'assignintro' and 'quizintro' editors
-                            $('#id_assignintro').closest('.fitem').hide();
-                            $('#id_quizintro').closest('.fitem').hide();
-            
-                            // Show 'activityeditor'
-                            $('#id_intro').closest('.fitem').show();
-                        } else {
-                            // Show both 'assignintro' and 'quizintro' for 'Dynamic' selection
-                            $('#id_assignintro').closest('.fitem').show();
-                            $('#id_quizintro').closest('.fitem').show();
-            
-                            // Hide 'activityeditor'
-                            $('#id_intro').closest('.fitem').hide();
-                        }
-                    }
-            
-                    // Run on load to initialize visibility
-                    updateEditorVisibility();
-            
-                    // Update visibility when the dropdown value changes
-                    $('#id_descriptiontype').change(function() {
-                        updateEditorVisibility();
-                    });
-            });"
-        );
-
+        $this->standard_intro_elements(get_string('quizphasedescription', 'assignquiz'), 'quizintro', true);
     }
     private function assignment_form($mform){
         global $COURSE, $CFG, $DB, $PAGE;
@@ -154,7 +113,6 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $mform->addElement('header', 'basicsettings', get_string('basicsettings', 'assignquiz'));
         $mform->setExpanded('basicsettings', true);
 
-        error_log('FORM = '.print_r($mform, true));
         // Activity.
         $mform->addElement('editor', 'activityeditor',
             get_string('assigninstructions', 'assignquiz'), array('rows' => 10), array('maxfiles' => EDITOR_UNLIMITED_FILES,
@@ -694,11 +652,10 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $assignquizexists = $DB->get_record('assignquiz', array('id' => $cmid));
 
         if($cmid && $quizexists && $assignexists){
-            $elementdraftitemid = file_get_submitted_draft_itemid('requiredknowledge');
-
-            $defaultvalues['requiredknowledge'] = array(
-                'text' => $assignquizexists->requiredknowledge,
-                'format' => $assignquizexists->requiredknowledgeformat,
+            $elementdraftitemid = file_get_submitted_draft_itemid('intro');
+            $defaultvalues['intro'] = array(
+                'text' => $assignquizexists->intro,
+                'format' => $assignquizexists->introformat,
                 'itemid' => $elementdraftitemid
             );
             $this->assign_preprocessing($assignexists, $defaultvalues);

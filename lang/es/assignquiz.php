@@ -52,6 +52,9 @@ $string['activitydescription'] = 'Required knowledge';
 $string['requiredknowledge_help'] = 'Describe in detail what knowledge is required for the users to properly meet with the standards of grading.';
 $string['aiquiz:view'] = 'Ability to see that the AssignQuiz exists, and the basic information 
 about it, for example the start date and time limit.';
+$string['availablefrom'] = 'Available from';
+$string['availableuntil'] = 'Available until';
+$string['availablefromuntil'] = 'Available from {$a->open} to {$a->close}';
 $string['aiquiz:addinstance'] = 'Ability to add a new AssignQuiz to the course.';
 $string['aiquiz:attempt'] = 'Ability to do the AssignQuiz as a student.';
 $string['aiquiz:reviewmyattempts'] = 'Ability for a student to review their previous attempts.';
