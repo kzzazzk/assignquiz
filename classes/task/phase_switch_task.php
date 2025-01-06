@@ -18,14 +18,32 @@
  * Plugin version and other meta-data are defined here.
  *
  * @package     mod_aiquiz
- * @copyright   2024 Zakaria Lasry Sahraou zsahraoui20@gmail.com
+ * @copyright   2024 Zakaria Lasry z.lsahraoui@alumnos.upm.es
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+namespace mod_assignquiz\task;
 
-$plugin->component = 'mod_assignquiz';
-$plugin->release = '0.1.0';
-$plugin->version = 2024112003;
-$plugin->requires = 2022112800;
-$plugin->maturity = MATURITY_ALPHA;
+use core\task\scheduled_task;
+
+class phase_switch_task extends scheduled_task {
+    public function get_name() {
+        return get_string('phase_switch_task', 'mod_assignquiz');
+    }
+
+    public function execute() {
+        global $DB;
+
+        $now = time();
+        $records = $DB->get_records('assignquiz');
+
+        foreach ($records as $record) {
+            if ($record->phase !== PHASE_QUIZ &&
+                $now >= $record->duedate) {
+                $record->phase = PHASE_QUIZ;
+                $DB->update_record('assignquiz', $record);
+                rebuild_course_cache($record->course, true);
+            }
+        }
+    }
+}

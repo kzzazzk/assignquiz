@@ -113,6 +113,7 @@ function recreate_editors(object $moduleinstance): void
             $moduleinstance->alwaysshowdescription = 0;
         }
     }
+
 }
 
 
@@ -147,7 +148,6 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
     $DB->update_record('aiassign', $moduleinstance);
 
     $moduleinstance->id = $moduleinstance->instance;
-
 
 
     if ($moduleinstance->showdescription) {

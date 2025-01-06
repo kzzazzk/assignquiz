@@ -24,8 +24,8 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-$string['pluginname'] = 'AssignQuiz';
-$string['modulename'] = 'AssignQuiz';
+$string['pluginname'] = 'Assign Quiz';
+$string['modulename'] = 'Assign Quiz';
 $string['modulenameplural'] = 'AssignQuizzes';
 $string['modulename_help'] = 'The AssignQuiz plugin enables teachers to create personalized quizzes with AI-generated questions based on student-uploaded content. It includes all standard quiz features plus:
 
@@ -43,19 +43,33 @@ Quizzes may be used
 * For customized self-assessment';
 $string['aiquizname'] = '';
 $string['aiquizfieldset'] = 'Settings';
-$string['assignmenttiming'] = 'Assignment Availability';
+$string['assignmenttiming'] = 'Availability';
 $string['assignmentname'] = 'Task name';
-$string['activityeditor'] = 'Assignment submission instructions';
+$string['assigninstructions'] = 'Assignment submission instructions';
+$string['assigninstructions_help'] = 'The actions you would like the student to complete for this assignment. This is only shown on the submission page where a student edits and submits their assignment.';
 $string['activityname'] = 'Activity name';
-$string['quiztiming'] = 'Quiz Timing';
+$string['quiztiming'] = 'Timing';
+$string['dynamic'] = 'Dynamic';
+$string['static'] = 'Static';
 $string['activitydescription'] = 'Required knowledge';
-$string['requiredknowledge_help'] = 'Describe in detail what knowledge is required for the users to properly meet with the standards of grading.';
-$string['aiquiz:view'] = 'Ability to see that the AssignQuiz exists, and the basic information 
-about it, for example the start date and time limit.';
-$string['availablefrom'] = 'Available from';
-$string['availableuntil'] = 'Available until';
-$string['availablefromuntilassign'] = '<b>Opened:</b> {$a->open} <br>
+$string['availablefrom'] = 'Available from {$a->open}';
+$string['availableuntil'] = 'Available until {$a->close}';
+$string['availablefromuntilassign'] = '<b>Opened:</b> {$a->open}<br>
 <b>Due:</b> {$a->due}';
+$string['availablefromuntilquiz'] = '<b>Opened:</b> {$a->open}<br>
+<b>Close:</b> {$a->close}';
+$string['phase_switch_task'] = 'Switch phases in AssignQuiz plugin';
+$string['submissionphasedescription'] = 'Submission phase description';
+$string['quizphasedescription'] = 'Quiz phase description';
+$string['description'] = 'Description';
+$string['requiredknowledge_help'] = 'Describe in detail what knowledge is required for the users to properly meet with the standards of grading.';
+$string['activityeditor_help'] = 'The actions you would like the student to complete for this assignment. This is only shown on the submission page where a student edits and submits their assignment.';
+$string['aiassignconfigtitle'] = 'Assignment Configuration';
+$string['aiquizconfigtitle'] = 'AI Quiz Configuration';
+$string['coursemoduleconfigtitle'] = 'Other course module settings';
+$string['basicsettings'] = 'Basic settings';
+$string['aiquiz:view'] = 'Ability to see that the AssignQuiz exists, and the basic information
+about it, for example the start date and time limit.';
 $string['aiquiz:addinstance'] = 'Ability to add a new AssignQuiz to the course.';
 $string['aiquiz:attempt'] = 'Ability to do the AssignQuiz as a student.';
 $string['aiquiz:reviewmyattempts'] = 'Ability for a student to review their previous attempts.';

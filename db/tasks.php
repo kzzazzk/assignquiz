@@ -18,14 +18,20 @@
  * Plugin version and other meta-data are defined here.
  *
  * @package     mod_aiquiz
- * @copyright   2024 Zakaria Lasry Sahraou zsahraoui20@gmail.com
+ * @copyright   2024 Zakaria Lasry z.lsahraoui@alumnos.upm.es
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+defined("MOODLE_INTERNAL") || die();
 
-$plugin->component = 'mod_assignquiz';
-$plugin->release = '0.1.0';
-$plugin->version = 2024112003;
-$plugin->requires = 2022112800;
-$plugin->maturity = MATURITY_ALPHA;
+$tasks = array(
+    array(
+        'classname' => 'mod_assignquiz\task\phase_switch_task',
+        'blocking' => 0,
+        'minute' => '*/1', // Run every 5 minutes
+        'hour' => '*',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*',
+    ),
+);
