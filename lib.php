@@ -73,7 +73,6 @@ function assignquiz_add_instance($moduleinstance, $mform = null)
     $moduleinstance->intro = $moduleinstance->assignintro;
     $moduleinstance->introformat = $moduleinstance->assignintroformat;
 
-
     $assignquizid = $DB->insert_record('assignquiz', $moduleinstance);
 
 
@@ -216,13 +215,17 @@ function assignquiz_get_coursemodule_info($coursemodule) {
             );
         }
     //}
-    elseif ($record->timeopen) {
-        $info->content = get_string('availablefrom', 'assignquiz', userdate($record->timeopen));
-    }
-    elseif ($record->timeclose) {
-        $info->content = get_string('availableuntil', 'assignquiz', userdate($record->timeclose));
-    }
-
+//    elseif ($record->timeopen) {
+//        $info->content = get_string('availablefrom', 'assignquiz', userdate($record->timeopen));
+//    }
+//    elseif ($record->timeclose) {
+//        $info->content = get_string('availableuntil', 'assignquiz', userdate($record->timeclose));
+//    }
+        if($coursemodule->showdescription){
+            if($record->intro){
+                $info->content = $info->content . '  <hr/>'. $record->intro;
+            }
+        }
     // Return the course module info.
     return $info;
 }

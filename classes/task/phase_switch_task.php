@@ -33,10 +33,8 @@ class phase_switch_task extends scheduled_task {
 
     public function execute() {
         global $DB;
-
         $now = time();
         $records = $DB->get_records('assignquiz');
-
         foreach ($records as $record) {
             if ($record->phase !== PHASE_QUIZ &&
                 $now >= $record->duedate) {

@@ -54,10 +54,12 @@ $string['static'] = 'Static';
 $string['activitydescription'] = 'Required knowledge';
 $string['availablefrom'] = 'Available from {$a->open}';
 $string['availableuntil'] = 'Available until {$a->close}';
-$string['availablefromuntilassign'] = '<b>Opened:</b> {$a->open}<br>
-<b>Due:</b> {$a->due}';
-$string['availablefromuntilquiz'] = '<b>Opened:</b> {$a->open}<br>
-<b>Close:</b> {$a->close}';
+$string['availablefromuntilassign'] = 'Submission Phase: <br>
+&ensp;&ensp;<b>Opened:</b> {$a->open}<br>
+&ensp;&ensp;<b>Due:</b> {$a->due}';
+$string['availablefromuntilquiz'] = 'Quiz Phase: <br>
+&ensp;&ensp;<b>Opened:</b> {$a->open}<br>
+&ensp;&ensp;<b>Close:</b> {$a->close}';
 $string['phase_switch_task'] = 'Switch phases in AssignQuiz plugin';
 $string['submissionphasedescription'] = 'Submission phase description';
 $string['quizphasedescription'] = 'Quiz phase description';
