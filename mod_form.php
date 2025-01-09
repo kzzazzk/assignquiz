@@ -160,7 +160,8 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         }
 
         $name = get_string('alwaysshowdescription', 'assign');
-        $mform->addElement('checkbox', 'alwaysshowdescription', $name);
+        $mform->addElement('advcheckbox', 'alwaysshowdescription', $name);
+        $mform->setDefault('alwaysshowdescription', 1);
         $mform->addHelpButton('alwaysshowdescription', 'alwaysshowdescription', 'assign');
         $mform->disabledIf('alwaysshowdescription', 'allowsubmissionsfromdate[enabled]', 'notchecked');
 
@@ -168,7 +169,6 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 //        $mform->setExpanded('submissiontypes');
 
         $mform->addElement('header', 'submissionsettings', get_string('submissionsettings', 'assign'));
-
         $name = get_string('submissiondrafts', 'assign');
         $mform->addElement('selectyesno', 'submissiondrafts', $name);
         $mform->addHelpButton('submissiondrafts', 'submissiondrafts', 'assign');
@@ -206,7 +206,6 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 //        if ($assignment->has_submissions_or_grades()) {
 //            $mform->freeze('teamsubmission');
 //        }
-
         $name = get_string('preventsubmissionnotingroup', 'assign');
         $mform->addElement('selectyesno', 'preventsubmissionnotingroup', $name);
         $mform->addHelpButton('preventsubmissionnotingroup',
@@ -235,7 +234,6 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 //        if ($assignment->has_submissions_or_grades()) {
 //            $mform->freeze('teamsubmissiongroupingid');
 //        }
-
         $mform->addElement('header', 'notifications', get_string('notifications', 'assign'));
 
         $name = get_string('sendnotifications', 'assign');
@@ -247,7 +245,7 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $mform->addHelpButton('sendlatenotifications', 'sendlatenotifications', 'assign');
         $mform->disabledIf('sendlatenotifications', 'sendnotifications', 'eq', 1);
 
-        $name = get_string('sendstudentnotificationsdefault', 'assignquiz');
+        $name = get_string('sendstudentnotificationsdefault', 'assign');
         $mform->addElement('selectyesno', 'sendstudentnotifications', $name);
         $mform->addHelpButton('sendstudentnotifications', 'sendstudentnotificationsdefault');
     }
@@ -340,7 +338,11 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         // -------------------------------------------------------------------------------
         // Grade settings.
         $this->standard_grading_coursemodule_elements();
-
+        $mform->setDefault('gradepass', 5);
+        $mform->addElement('text', 'mingrade', get_string('mingrade', 'assignquiz'),PARAM_FLOAT);
+        $mform->setDefault('mingrade', 0);
+        $mform->addElement('text', 'maxgrade', get_string('maxgrade', 'assignquiz'),PARAM_FLOAT);
+        $mform->setDefault('maxgrade', 10);
         $mform->removeElement('grade');
         if (property_exists($this->current, 'grade')) {
             $currentgrade = $this->current->grade;
@@ -368,7 +370,7 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 
         // -------------------------------------------------------------------------------
         $mform->addElement('header', 'layouthdr', get_string('layout', 'quiz'));
-
+        //questionsperpage, repaginatenow, navmethod
         $pagegroup = array();
         $pagegroup[] = $mform->createElement('select', 'questionsperpage',
             get_string('newpage', 'quiz'), quiz_questions_per_page_options(), array('id' => 'id_questionsperpage'));
@@ -658,8 +660,9 @@ class mod_assignquiz_mod_form extends moodleform_mod {
                 'format' => $assignquizexists->introformat,
                 'itemid' => $elementdraftitemid
             );
+            $defaultvalues['showdescription'] = $DB->get_field('course_modules','showdescription',['instance'=>$cmid],MUST_EXIST);
             $this->assign_preprocessing($assignexists, $defaultvalues);
-            $this->quiz_preprocessing($quizexists, $defaultvalues);
+            $this->quiz_preprocessing($quizexists, $assignquizexists->id,$defaultvalues);
         }
     }
 
@@ -682,15 +685,63 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $defaultvalues['allowsubmissionsfromdate'] = $assigndata->allowsubmissionsfromdate;
         $defaultvalues['gradeduedate'] = $assigndata->gradeduedate;
         $defaultvalues['alwaysshowdescription'] = $assigndata->alwaysshowdescription;
-        $defaultvalues['showdescription'] = is_null($assigndata->alwaysshowdescription) ? null : 1;
-        error_log('ON PREPROCESSING: '.print_r($defaultvalues,true));
+
+        $defaultvalues['submissiondrafts'] = $assigndata->submissiondrafts;
+        $defaultvalues['requiresubmissionstatement'] = $assigndata->requiresubmissionstatement;
+        $defaultvalues['attemptreopenmethod'] = $assigndata->attemptreopenmethod;
+        $defaultvalues['maxattempts'] = $assigndata->maxattempts;
+
+        $defaultvalues['teamsubmission'] = $assigndata->teamsubmission;
+        $defaultvalues['preventsubmissionnotingroup'] = $assigndata->preventsubmissionnotingroup;
+        $defaultvalues['requireallteammemberssubmit'] = $assigndata->requireallteammemberssubmit;
+        $defaultvalues['teamsubmissiongroupingid'] = $assigndata->teamsubmissiongroupingid;
+
+        $defaultvalues['sendnotifications'] = $assigndata->sendnotifications;
+        $defaultvalues['sendlatenotifications'] = $assigndata->sendlatenotifications;
+        $defaultvalues['sendstudentnotifications'] = $assigndata->sendstudentnotifications;
+
     }
-    public function quiz_preprocessing($assigndata, &$defaultvalues) {
+    public function quiz_preprocessing($assigndata,$assignquizid, &$defaultvalues) {
+        global $DB;
         $elementdraftitemid = file_get_submitted_draft_itemid('quizintro');
         $defaultvalues['quizintro'] = array(
             'text' => $assigndata->quizintro,
             'format' => $assigndata->quizintroformat,
             'itemid' => $elementdraftitemid
         );
+
+        $defaultvalues['timeopen'] = $assigndata->timeopen;
+        $defaultvalues['timeclose'] = $assigndata->timeclose;
+        $defaultvalues['timelimit'] = $assigndata->timelimit;
+        $defaultvalues['overduehandling'] = $assigndata->overduehandling;
+        $defaultvalues['graceperiod'] = $assigndata->graceperiod;
+
+        $defaultvalues['gradecat'] = $assigndata->gradecat;
+
+        $inserted_into_grade_items = $DB->record_exists('grade_items', ['iteminstance' => $assignquizid]);
+        $defaultvalues['gradepass'] = !$inserted_into_grade_items
+            ? 5
+            : $DB->get_field('grade_items', 'gradepass', ['iteminstance' => $assignquizid,'itemmodule' => 'assignquiz'], MUST_EXIST);
+
+        $defaultvalues['maxgrade'] = !$inserted_into_grade_items
+            ? 10
+            : $DB->get_field('grade_items', 'grademax', ['iteminstance' => $assignquizid,'itemmodule' => 'assignquiz'], MUST_EXIST);
+
+        $defaultvalues['mingrade'] = !$inserted_into_grade_items
+            ? 0
+            : $DB->get_field('grade_items', 'grademin', ['iteminstance' => $assignquizid,'itemmodule' => 'assignquiz'], MUST_EXIST);
+        $defaultvalues['attempts'] = $assigndata->attempts;
+        $defaultvalues['grademethod'] = $assigndata->grademethod;
+
+        $defaultvalues['questionsperpage'] = $assigndata->questionsperpage;
+        $defaultvalues['repaginatenow'] = $assigndata->repaginatenow;
+        $defaultvalues['navmethod'] = $assigndata->navmethod;
+
+        $defaultvalues['shuffleanswers'] = $assigndata->shuffleanswers;
+        $defaultvalues['preferredbehaviour'] = $assigndata->preferredbehaviour;
+        $defaultvalues['canredoquestions'] = $assigndata->canredoquestions;
+        $defaultvalues['attemptonlast'] = $assigndata->attemptonlast;
+
+
     }
 }

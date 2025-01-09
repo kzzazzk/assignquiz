@@ -61,6 +61,8 @@ $string['availablefromuntilquiz'] = 'Quiz Phase: <br>
 &ensp;&ensp;<b>Opened:</b> {$a->open}<br>
 &ensp;&ensp;<b>Close:</b> {$a->close}';
 $string['phase_switch_task'] = 'Switch phases in AssignQuiz plugin';
+$string['mingrade'] = 'Minimum grade';
+$string['maxgrade'] = 'Maximum grade';
 $string['submissionphasedescription'] = 'Submission phase description';
 $string['quizphasedescription'] = 'Quiz phase description';
 $string['description'] = 'Description';

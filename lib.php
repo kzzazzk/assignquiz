@@ -83,9 +83,32 @@ function assignquiz_add_instance($moduleinstance, $mform = null)
     $quiz_id = $DB->insert_record('aiquiz', $moduleinstance);
     $moduleinstance->quiz_id = $quiz_id;
     $DB->set_field('aiquiz', 'assignquizid', $assignquizid, array('id' => $quiz_id));
-
+    assignquiz_after_add_or_update($moduleinstance, $assignquizid);
     return $assignquizid;
 }
+function assignquiz_after_add_or_update($moduleinstance, $assignquizid, $mform = null)
+{
+    global $DB;
+    $gradeitem = new stdClass();
+    $gradeitem->grademax = $moduleinstance->maxgrade;
+    $gradeitem->grademin = $moduleinstance->mingrade;
+    $gradeitem->gradepass = $moduleinstance->gradepass;
+    $gradeitem->iteminstance = $assignquizid;
+
+    if (!$DB->record_exists('grade_items', ['iteminstance' => $assignquizid, 'itemmodule' => 'assignquiz'])) {
+        $gradeitem->itemname = $moduleinstance->name; // Name of the instance of the module
+        $gradeitem->itemtype = 'mod'; // Because it is an activity
+        $gradeitem->itemmodule = 'assignquiz'; // Our module name
+        $gradeitem->gradetype = 1; // Default value
+        $DB->insert_record('grade_items', $gradeitem);
+    } else {
+        $existing_grade_item = $DB->get_record('grade_items', ['iteminstance' => $assignquizid, 'itemmodule' => 'assignquiz'], 'id');
+        $gradeitem->id = $existing_grade_item->id;
+        $DB->update_record('grade_items', $gradeitem);
+    }
+}
+
+
 
 /**
  * @param object $moduleinstance
@@ -105,14 +128,6 @@ function recreate_editors(object $moduleinstance): void
     $moduleinstance->quizintroformat = $moduleinstance->quizintro['format'];
     $moduleinstance->quizintro = $moduleinstance->quizintro['text'];
 
-    if ($moduleinstance->showdescription) {
-        if ($moduleinstance->alwaysshowdescription || time() > $moduleinstance->allowsubmissionsfromdate) {
-            $moduleinstance->alwaysshowdescription = 1;
-        } else {
-            $moduleinstance->alwaysshowdescription = 0;
-        }
-    }
-
 }
 
 
@@ -131,11 +146,12 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
 
     global $DB;
     recreate_editors($moduleinstance);
+    error_log('Submitted Data for update_instance: ' . print_r($moduleinstance, true));
 
 
     $moduleinstance->timemodified = time();
 
-
+    //When the assignquiz is created it will use the description in the submission phase
     $moduleinstance->intro = $moduleinstance->assignintro;
     $moduleinstance->introformat = $moduleinstance->assignintroformat;
 
@@ -147,15 +163,8 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
     $DB->update_record('aiassign', $moduleinstance);
 
     $moduleinstance->id = $moduleinstance->instance;
+    assignquiz_after_add_or_update($moduleinstance, $moduleinstance->id);
 
-
-    if ($moduleinstance->showdescription) {
-        if ($moduleinstance->alwaysshowdescription || time() > $moduleinstance->allowsubmissionsfromdate) {
-            $moduleinstance->alwaysshowdescription = 1;
-        } else {
-            $moduleinstance->alwaysshowdescription = 0;
-        }
-    }
     return $DB->update_record('assignquiz', $moduleinstance);
 }
 
@@ -221,7 +230,8 @@ function assignquiz_get_coursemodule_info($coursemodule) {
 //    elseif ($record->timeclose) {
 //        $info->content = get_string('availableuntil', 'assignquiz', userdate($record->timeclose));
 //    }
-        if($coursemodule->showdescription){
+        $showdescription = $DB->get_field('course_modules','showdescription',['instance'=>$coursemodule->instance],MUST_EXIST);
+        if($showdescription){
             if($record->intro){
                 $info->content = $info->content . '  <hr/>'. $record->intro;
             }
