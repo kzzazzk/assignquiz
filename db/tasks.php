@@ -28,7 +28,7 @@ $tasks = array(
     array(
         'classname' => 'mod_assignquiz\task\phase_switch_task',
         'blocking' => 0,
-        'minute' => '*/1', // Run every 5 minutes
+        'minute' => '*/1', // Run every 5 minute
         'hour' => '*',
         'day' => '*',
         'month' => '*',

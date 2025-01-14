@@ -61,6 +61,7 @@ $string['availablefromuntilquiz'] = 'Quiz Phase: <br>
 &ensp;&ensp;<b>Opened:</b> {$a->open}<br>
 &ensp;&ensp;<b>Close:</b> {$a->close}';
 $string['phase_switch_task'] = 'Switch phases in AssignQuiz plugin';
+$string['visible_after_allowsubmissionfromdate'] = 'Makes AssignQuiz visible after the admission date has passed only if "Always show description" is disabled.';
 $string['mingrade'] = 'Minimum grade';
 $string['maxgrade'] = 'Maximum grade';
 $string['submissionphasedescription'] = 'Submission phase description';

@@ -23,6 +23,8 @@
  */
 
 namespace mod_assignquiz\form;
+use context;
+
 defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once($CFG->libdir . '/formslib.php');
@@ -30,7 +32,7 @@ require_once($CFG->libdir . '/formslib.php');
 /**
  * Class definition
  */
-class assignquiz_context_form extends \moodleform {
+class assignquiz_context_form extends \context_module {
     /**
      * Define the form.
      */
@@ -41,4 +43,29 @@ class assignquiz_context_form extends \moodleform {
         $submitlabel = get_string('submit');
         $mform->addElement('submit', 'submitmessage', $submitlabel);
     }
+    public static function instance($cmid, $strictness = MUST_EXIST) {
+        global $DB;
+
+        if ($context = context::cache_get(CONTEXT_MODULE, $cmid)) {
+            return $context;
+        }
+
+        if (!$record = $DB->get_record('context', array('contextlevel' => CONTEXT_MODULE, 'instanceid' => $cmid))) {
+            if ($cm = $DB->get_record('course_modules', array('id' => $cmid), 'id,course', $strictness)) {
+                $parentcontext = context_course::instance($cm->course);
+                $record = context::insert_context_record(CONTEXT_MODULE, $cm->id, $parentcontext->path);
+            }
+        }
+
+        if ($record) {
+            $context = new context_module($record);
+            context::cache_add($context);
+            return $context;
+        }
+
+        return false;
+    }
+
+
+
 }

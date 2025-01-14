@@ -23,8 +23,10 @@
  */
 
 namespace mod_assignquiz\task;
-
 use core\task\scheduled_task;
+global $CFG;
+
+require_once($CFG->dirroot . '/mod/assignquiz/lib.php');
 
 class phase_switch_task extends scheduled_task {
     public function get_name() {
@@ -34,14 +36,19 @@ class phase_switch_task extends scheduled_task {
     public function execute() {
         global $DB;
         $now = time();
-        $records = $DB->get_records('assignquiz');
+        $records = $DB->get_records_sql(
+            "SELECT * FROM {assignquiz} 
+                 WHERE phase = :phase 
+                 AND duedate <= :now",
+            array(
+                'phase' => PHASE_SUBMISSION,
+                'now' => $now
+            )
+        );
         foreach ($records as $record) {
-            if ($record->phase !== PHASE_QUIZ &&
-                $now >= $record->duedate) {
-                $record->phase = PHASE_QUIZ;
-                $DB->update_record('assignquiz', $record);
-                rebuild_course_cache($record->course, true);
-            }
+            $record->phase = PHASE_QUIZ;
+            $DB->update_record('assignquiz', $record);
+            rebuild_course_cache($record->course, true);
         }
     }
 }

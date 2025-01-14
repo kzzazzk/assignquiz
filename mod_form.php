@@ -426,7 +426,6 @@ class mod_assignquiz_mod_form extends moodleform_mod {
 //        if ($this->get_max_attempts_for_any_override() < 2) {
 //            $mform->hideIf('attemptonlast', 'attempts', 'eq', 1);
 //        }
-
         // -------------------------------------------------------------------------------
         $mform->addElement('header', 'reviewoptionshdr',
             get_string('reviewoptionsheading', 'quiz'));
@@ -741,6 +740,13 @@ class mod_assignquiz_mod_form extends moodleform_mod {
         $defaultvalues['preferredbehaviour'] = $assigndata->preferredbehaviour;
         $defaultvalues['canredoquestions'] = $assigndata->canredoquestions;
         $defaultvalues['attemptonlast'] = $assigndata->attemptonlast;
+
+        $defaultvalues['reviewattempt'] = $assigndata->reviewattempt;
+        $defaultvalues['reviewcorrectness'] = $assigndata->reviewcorrectness;
+        $defaultvalues['reviewmarks'] = $assigndata->reviewmarks;
+        $defaultvalues['reviewspecificfeedback'] = $assigndata->reviewspecificfeedback;
+        $defaultvalues['reviewgeneralfeedback'] = $assigndata->reviewgeneralfeedback;
+        $defaultvalues['reviewrightanswer'] = $assigndata->reviewrightanswer;
 
 
     }
