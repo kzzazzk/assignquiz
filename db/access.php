@@ -27,7 +27,7 @@ defined("MOODLE_INTERNAL") || die();
 $capabilities = [
     // Ability to see that the AI quiz exists, and the basic information
     // about it, for example the start date and time limit.
-    "mod/aiquiz:view" => [
+    "mod/assignquiz:view" => [
         "captype" => "read",
         "contextlevel" => CONTEXT_MODULE,
         "archetypes" => [
@@ -40,7 +40,7 @@ $capabilities = [
     ],
 
     // Ability to add a new AI quiz to the course.
-    "mod/aiquiz:addinstance" => [
+    "mod/assignquiz:addinstance" => [
         "riskbitmask" => RISK_XSS,
 
         "captype" => "write",
@@ -53,7 +53,7 @@ $capabilities = [
     ],
 
     // Ability to do the AI quiz as a 'student'.
-    "mod/aiquiz:attempt" => [
+    "mod/assignquiz:attempt" => [
         "riskbitmask" => RISK_SPAM,
         "captype" => "write",
         "contextlevel" => CONTEXT_MODULE,
@@ -64,7 +64,7 @@ $capabilities = [
 
     // Ability for a 'Student' to review their previous attempts. Review by
     // 'Teachers' is controlled by mod/quiz:viewreports.
-    "mod/aiquiz:reviewmyattempts" => [
+    "mod/assignquiz:reviewmyattempts" => [
         "captype" => "read",
         "contextlevel" => CONTEXT_MODULE,
         "archetypes" => [
@@ -74,7 +74,7 @@ $capabilities = [
     ],
 
     // Edit the AI quiz settings, add and remove questions.
-    "mod/aiquiz:manage" => [
+    "mod/assignquiz:manage" => [
         "riskbitmask" => RISK_SPAM,
         "captype" => "write",
         "contextlevel" => CONTEXT_MODULE,
@@ -85,7 +85,7 @@ $capabilities = [
     ],
 
     // Edit the AI quiz overrides.
-    "mod/aiquiz:manageoverrides" => [
+    "mod/assignquiz:manageoverrides" => [
         "captype" => "write",
         "contextlevel" => CONTEXT_MODULE,
         "archetypes" => [
@@ -95,7 +95,7 @@ $capabilities = [
     ],
 
     // View the AI quiz overrides (only checked for users who don't have mod/aiquiz:manageoverrides.
-    "mod/aiquiz:viewoverrides" => [
+    "mod/assignquiz:viewoverrides" => [
         "captype" => "read",
         "contextlevel" => CONTEXT_MODULE,
         "archetypes" => [
@@ -106,7 +106,7 @@ $capabilities = [
     ],
 
     // Preview the AI quiz.
-    "mod/aiquiz:preview" => [
+    "mod/assignquiz:preview" => [
         "captype" => "write", // Only just a write.
         "contextlevel" => CONTEXT_MODULE,
         "archetypes" => [

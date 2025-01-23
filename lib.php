@@ -31,6 +31,7 @@ const PHASE_QUIZ = 2;
 
 
 require_once($CFG->dirroot . '/mod/assignquiz/accessmanager.php');
+require_once($CFG->dirroot . '/mod/quiz/lib.php');
 
 /**
  * Return if the plugin supports $feature.
@@ -70,11 +71,13 @@ function assignquiz_add_instance($moduleinstance, $mform = null)
     global $DB;
     $moduleinstance->timecreated = time();
     recreate_editors($moduleinstance);
+    quiz_process_options($moduleinstance);
     $moduleinstance->intro = $moduleinstance->assignintro;
     $moduleinstance->introformat = $moduleinstance->assignintroformat;
-
+    if($moduleinstance->quizpassword){
+        $moduleinstance->password = $moduleinstance->quizpassword;
+    }
     $assignquizid = $DB->insert_record('assignquiz', $moduleinstance);
-
 
     $assign_id = $DB->insert_record('aiassign', $moduleinstance);
     $moduleinstance->assignment_id = $assign_id;
@@ -89,6 +92,7 @@ function assignquiz_add_instance($moduleinstance, $mform = null)
 function assignquiz_after_add_or_update($moduleinstance, $assignquizid, $mform = null)
 {
     global $DB;
+
     $gradeitem = new stdClass();
     $gradeitem->grademax = $moduleinstance->maxgrade;
     $gradeitem->grademin = $moduleinstance->mingrade;
@@ -107,6 +111,7 @@ function assignquiz_after_add_or_update($moduleinstance, $assignquizid, $mform =
         $DB->update_record('grade_items', $gradeitem);
     }
 }
+
 
 
 
@@ -146,6 +151,7 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
 
     global $DB;
     recreate_editors($moduleinstance);
+    quiz_process_options($moduleinstance);
     error_log('Submitted Data for update_instance: ' . print_r($moduleinstance, true));
 
 
@@ -154,7 +160,9 @@ function assignquiz_update_instance($moduleinstance, $mform = null)
     //When the assignquiz is created it will use the description in the submission phase
     $moduleinstance->intro = $moduleinstance->assignintro;
     $moduleinstance->introformat = $moduleinstance->assignintroformat;
-
+    if($moduleinstance->quizpassword){
+        $moduleinstance->password = $moduleinstance->quizpassword;
+    }
 
     $moduleinstance->id = $DB->get_field('assignquiz', 'id', array('id' => $moduleinstance->instance));
     $DB->update_record('aiquiz', $moduleinstance);

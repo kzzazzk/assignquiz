@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+global $CFG;
 
 /**
  * Library of interface functions and constants.
@@ -23,111 +24,138 @@
  */
 
 use mod_assign\output\assign_header;
-
+use mod_assignquiz\output\aiassign_submission_status;
 require_once($CFG->dirroot.'/mod/assign/locallib.php');
+require_once($CFG->dirroot.'/mod/assign/submission/comments/locallib.php');
+require_once($CFG->dirroot.'/mod/assign/submission/file/locallib.php');
+require_once($CFG->dirroot.'/mod/assign/renderable.php');
+require_once($CFG->dirroot.'/mod/assign/submission/onlinetext/locallib.php');
+require_once($CFG->dirroot . '/mod/assignquiz/classes/output/aiassign_submission_status.php');
 class aiassign extends assign
 {
-    private $assign_instance;
-    public function add_instance(stdClass $formdata, $callplugins)
+
+    public function __construct($coursemodulecontext, $coursemodule, $course)
     {
-        global $DB;
-
-        $adminconfig = $this->get_admin_config();
-
-//        $this->name = $formdata->name;
-//        $this->timemodified = time();
-//        $this->timecreated = time();
-//        $this->course = $formdata->course;
-//
-//        $this->intro = $formdata->intro;
-//        $this->introformat = $formdata->introformat;
-//        $this->alwaysshowdescription = !empty($formdata->alwaysshowdescription);
-//        if (isset($formdata->activityeditor)) {
-//            $this->activity = $this->save_editor_draft_files($formdata);
-//            $this->activityformat = $formdata->activityeditor['format'];
-//        }
-//        if (isset($formdata->submissionattachments)) {
-//            $this->submissionattachments = $formdata->submissionattachments;
-//        }
-//        $this->submissiondrafts = $formdata->submissiondrafts;
-//        $this->requiresubmissionstatement = $formdata->requiresubmissionstatement;
-//        $this->sendnotifications = $formdata->sendnotifications;
-//        $this->sendlatenotifications = $formdata->sendlatenotifications;
-//        $this->sendstudentnotifications = $adminconfig->sendstudentnotifications;
-//        if (isset($formdata->sendstudentnotifications)) {
-//            $this->sendstudentnotifications = $formdata->sendstudentnotifications;
-//        }
-//        $this->gradingduedate = $formdata->gradingduedate;
-//        if (isset($formdata->timelimit)) {
-//            $this->timelimit = $formdata->timelimit;
-//        }
-//        $this->allowsubmissionsfromdate = $formdata->allowsubmissionsfromdate;
-//        $this->grade = $formdata->grade;
-//        $this->completionsubmit = !empty($formdata->completionsubmit);
-//        $this->teamsubmission = $formdata->teamsubmission;
-//        $this->requireallteammemberssubmit = $formdata->requireallteammemberssubmit;
-//        if (isset($formdata->teamsubmissiongroupingid)) {
-//            $this->teamsubmissiongroupingid = $formdata->teamsubmissiongroupingid;
-//        }
-//        $this->blindmarking = $formdata->blindmarking;
-//        if (isset($formdata->hidegrader)) {
-//            $this->hidegrader = $formdata->hidegrader;
-//        }
-//        $this->attemptreopenmethod = ASSIGN_ATTEMPT_REOPEN_METHOD_NONE;
-//        if (!empty($formdata->attemptreopenmethod)) {
-//            $this->attemptreopenmethod = $formdata->attemptreopenmethod;
-//        }
-//        if (!empty($formdata->maxattempts)) {
-//            $this->maxattempts = $formdata->maxattempts;
-//        }
-//        if (isset($formdata->preventsubmissionnotingroup)) {
-//            $this->preventsubmissionnotingroup = $formdata->preventsubmissionnotingroup;
-//        }
-//        $this->markingworkflow = $formdata->markingworkflow;
-//        $this->markingallocation = $formdata->markingallocation;
-//        if (empty($this->markingworkflow)) { // If marking workflow is disabled, make sure allocation is disabled.
-//            $this->markingallocation = 0;
-//        }
-//        $returnid = $DB->insert_record('aiassign', $this);
-//        $this->instance = $DB->get_record('aiassign', array('id' => $returnid), '*', MUST_EXIST);
-//        $this->assign_instance = $DB->get_record('aiassign', array('id' => $returnid), '*', MUST_EXIST);
-//
-//        $this->save_intro_draft_files($formdata);
-//        $this->save_editor_draft_files($formdata);
-////
-//        if ($callplugins) {
-//            // Call save_settings hook for submission plugins.
-//            foreach ($this->submissionplugins as $plugin) {
-//                if (!$this->update_plugin_instance($plugin, $formdata)) {
-//                    throw new \moodle_exception($plugin->get_error());
-//                    return false;
-//                }
-//            }
-//            foreach ($this->feedbackplugins as $plugin) {
-//                if (!$this->update_plugin_instance($plugin, $formdata)) {
-//                    throw new \moodle_exception($plugin->get_error());
-//                    return false;
-//                }
-//            }
-//
-//            // In the case of upgrades the coursemodule has not been set,
-//            // so we need to wait before calling these two.
-//            // $this->update_calendar($formdata->coursemodule);
-//            if (!empty($formdata->completionexpected)) {
-//                \core_completion\api::update_completion_date_event($formdata->coursemodule, 'aiassign', $this->instance,
-//                    $formdata->completionexpected);
-//            }
-//        }
-        /*
-            $update = new stdClass();
-            $update->id = $this->get_instance()->id;
-            $update->nosubmissions = (!$this->is_any_submission_plugin_enabled()) ? 1: 0;
-            $DB->update_record('aiassign', $update);
-        */
-
-//        return $returnid;
+        parent::__construct($coursemodulecontext, $coursemodule, $course);
+        $this->submissionplugins = parent::get_submission_plugins(); //override the submission plugins with it's parent due to private access on the parent class
+    }
+    public function reformatnames(&$names) {
+        foreach ($names as &$name) {
+            $name = str_replace('assign', 'assignquiz', $name);
+        }
+        $pathcomments = $names[0]['comments'];
+        $pathfile = $names[0]['file'];
+        $pathonlinetext = $names[0]['onlinetext'];
+        $names = ['comments' => $pathcomments, 'file' => $pathfile, 'onlinetext' => $pathonlinetext];  // Reformat the array
     }
 
+    public function get_renderer()
+    {
+        global $PAGE;
+        if ($this->output) {
+            return $this->output;
+        }
+        $this->output = $PAGE->get_renderer('mod_assignquiz', null, RENDERER_TARGET_GENERAL);
+        return $this->output;
+    }
+
+//    public function add_all_plugin_settings(MoodleQuickForm $mform) {
+//        $mform->addElement('header', 'submissiontypes', get_string('submissiontypes', 'assign'));
+//
+//        $submissionpluginsenabled = array();
+//        $group = $mform->addGroup(array(), 'submissionplugins', get_string('submissiontypes', 'assign'), array(' '), false);
+//        foreach ($this->submissionplugins as $plugin) {
+//            $this->add_plugin_settings2($plugin, $mform, $submissionpluginsenabled);
+//        }
+//        $group->setElements($submissionpluginsenabled);
+//    }
+
+
+    public function load_plugins($subtype) {
+        global $CFG;
+        $result = array();
+
+        $names = [core_component::get_plugin_list($subtype)];
+        $this->reformatnames($names);
+//        $names = $names = [["comments" => $names['comments'],"file" => $names['file'],"onlinetext" => $names['onlinetext']]];//removing feedback from the list of plugins since we are not using it (feedback is generated by the ai and it will be for the quiz and not for the assignment)
+        foreach ($names as $name => $path) {
+            if (file_exists($path . '/locallib.php')) {
+                require_once($path . '/locallib.php');
+
+                $shortsubtype = substr($subtype, strlen('assign'));
+                $pluginclass = 'assign_' . $shortsubtype . '_' . $name;
+
+                $plugin = new $pluginclass($this, $name);
+
+                if ($plugin instanceof assign_plugin) {
+
+                    $idx = $plugin->get_sort_order();
+                    while (array_key_exists($idx, $result)) {
+                        $idx +=1;
+                    }
+                    $result[$idx] = $plugin;
+                }
+            }
+        }
+
+        ksort($result);
+        return $result;
+    }
+    public function plugin_data_preprocessing(&$defaultvalues) {
+        foreach ($this->submissionplugins as $plugin) {
+            if ($plugin->is_visible()) {
+                $plugin->data_preprocessing($defaultvalues);
+            }
+        }
+    }
+    public function custom_update_plugin_instance(aiassign_plugin $plugin, stdClass $formdata)
+    {
+        if ($plugin->is_visible()) {
+            $enabledname = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
+            if (!empty($formdata->$enabledname)) {
+                $plugin->enable();
+                if (!$plugin->save_settings($formdata)) {
+                    throw new \moodle_exception($plugin->get_error());
+                    return false;
+                }
+            } else {
+                $plugin->disable();
+            }
+        }
+        return true;
+    }
+
+    public function update_plugin_instance(assign_plugin $plugin, stdClass $formdata) {
+        custom_update_plugin_instance($plugin, $formdata);
+    }
+
+    //temporary fix due to no overriding options in the parent class
+//    protected function add_plugin_settings2(aiassign_plugin $plugin, MoodleQuickForm $mform, & $pluginsenabled)
+//    {
+//        global $CFG;
+//        if ($plugin->is_visible() && !$plugin->is_configurable() && $plugin->is_enabled()) {
+//            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
+//            $pluginsenabled[] = $mform->createElement('hidden', $name, 1);
+//            $mform->setType($name, PARAM_BOOL);
+//            $plugin->get_settings($mform);
+//            error_log('SOPAAA'.print_r($name,true));
+//        } else if ($plugin->is_visible() && $plugin->is_configurable()) {
+//            $name = $plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled';
+//            $label = $plugin->get_name();
+//            $pluginsenabled[] = $mform->createElement('checkbox', $name, '', $label);
+//            $helpicon = $this->get_renderer()->help_icon('enabled', $plugin->get_subtype() . '_' . $plugin->get_type());
+//            $pluginsenabled[] = $mform->createElement('static', '', '', $helpicon);
+//
+//            $default = get_config($plugin->get_subtype() . '_' . $plugin->get_type(), 'default');
+//            if ($plugin->get_config('enabled') !== false) {
+//                $default = $plugin->is_enabled();
+//            }
+//            $mform->setDefault($plugin->get_subtype() . '_' . $plugin->get_type() . '_enabled', $default);
+//
+//            $plugin->get_settings($mform);
+//
+//        }
+//    }
     public function update_calendar($coursemoduleid)
     {
         return parent::update_calendar($coursemoduleid); // TODO: Change the autogenerated stub
@@ -279,7 +307,7 @@ class aiassign extends assign
         }
         // Now show the right view page.
         if ($action == 'redirect') {
-            $nextpageurl = new moodle_url('/mod/assign/view.php', $nextpageparams);
+            $nextpageurl = new moodle_url('/mod/assignquiz/view.php', $nextpageparams);
             $messages = '';
             $messagetype = \core\output\notification::NOTIFY_INFO;
             $errors = $this->get_error_messages();
@@ -325,7 +353,7 @@ class aiassign extends assign
         } else if ($action == 'viewpluginpage') {
             $o .= $this->view_plugin_page();
         } else if ($action == 'viewcourseindex') {
-            $o .= $this->view_course_index();
+//            $o .= $this->view_course_index();
         } else if ($action == 'viewbatchsetmarkingworkflowstate') {
             $o .= $this->view_batch_set_workflow_state($mform);
         } else if ($action == 'viewbatchmarkingallocation') {
@@ -341,6 +369,7 @@ class aiassign extends assign
 
         return $o;
     }
+
     public function view_student_summary($user, $showlinks) {
 
         $o = '';
@@ -365,6 +394,86 @@ class aiassign extends assign
             }
         }
         return $o;
+    }
+    public function get_assign_submission_status_renderable($user, $showlinks) {
+        global $PAGE;
+
+        $instance = $this->get_instance();
+        $flags = $this->get_user_flags($user->id, false);
+        $submission = $this->get_user_submission($user->id, false);
+
+        $teamsubmission = null;
+        $submissiongroup = null;
+        $notsubmitted = array();
+        if ($instance->teamsubmission) {
+            $teamsubmission = $this->get_group_submission($user->id, 0, false);
+            $submissiongroup = $this->get_submission_group($user->id);
+            $groupid = 0;
+            if ($submissiongroup) {
+                $groupid = $submissiongroup->id;
+            }
+            $notsubmitted = $this->get_submission_group_members_who_have_not_submitted($groupid, false);
+        }
+
+        $showedit = $showlinks &&
+            ($this->is_any_submission_plugin_enabled()) &&
+            $this->can_edit_submission($user->id);
+
+        $submissionlocked = ($flags && $flags->locked);
+
+        // Grading criteria preview.
+        $gradingmanager = get_grading_manager($this->get_context(), 'mod_assign', 'submissions');
+        $gradingcontrollerpreview = '';
+        if ($gradingmethod = $gradingmanager->get_active_method()) {
+            $controller = $gradingmanager->get_controller($gradingmethod);
+            if ($controller->is_form_defined()) {
+                $gradingcontrollerpreview = $controller->render_preview($PAGE);
+            }
+        }
+
+        $showsubmit = ($showlinks && $this->submissions_open($user->id));
+        $showsubmit = ($showsubmit && $this->show_submit_button($submission, $teamsubmission, $user->id));
+
+        $extensionduedate = null;
+        if ($flags) {
+            $extensionduedate = $flags->extensionduedate;
+        }
+        $viewfullnames = has_capability('moodle/site:viewfullnames', $this->get_context());
+
+        $gradingstatus = $this->get_grading_status($user->id);
+        $usergroups = $this->get_all_groups($user->id);
+        $submissionstatus = new mod_assignquiz\output\aiassign_submission_status($instance->allowsubmissionsfromdate,
+            $instance->alwaysshowdescription,
+            $submission,
+            $instance->teamsubmission,
+            $teamsubmission,
+            $submissiongroup,
+            $notsubmitted,
+            $this->is_any_submission_plugin_enabled(),
+            $submissionlocked,
+            $this->is_graded($user->id),
+            $instance->duedate,
+            $instance->cutoffdate,
+            $this->get_submission_plugins(),
+            $this->get_return_action(),
+            $this->get_return_params(),
+            $this->get_course_module()->id,
+            $this->get_course()->id,
+            assign_submission_status::STUDENT_VIEW,
+            $showedit,
+            $showsubmit,
+            $viewfullnames,
+            $extensionduedate,
+            $this->get_context(),
+            $this->is_blind_marking(),
+            $gradingcontrollerpreview,
+            $instance->attemptreopenmethod,
+            $instance->maxattempts,
+            $gradingstatus,
+            $instance->preventsubmissionnotingroup,
+            $usergroups,
+            $instance->timelimit);
+        return $submissionstatus;
     }
 
     protected function view_submission_page() {
